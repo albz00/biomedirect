@@ -1,0 +1,119 @@
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="TransportProteinsT" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterCellBiology.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/LessonSpecificStylesheets/TransportProteins.css">
+    <title>TransportProteins</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>Transport Proteins</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viTransportProteins.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+                <img class="btnHeader" id="btnToCentralMenu" src="../../../../CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick='executeClick("../../../CentralMenuT.html")'><span class="sr-only">Return to Main Menu</span>
+                <img class="btnHeader" id="btnTogTextLessonMenuX" src="../../../../CommonFiles/Buttons/BTN_TogLessonMenuX.jpg" onclick='executeClick("../../../../TextX/LessonsX/CellBiologyX/TransportProteinsX/TransportProteinsX.html")'><span class="sr-only">Hide Explanatory Text</span>
+                <img class="btnHeader" id="btnToPopUps" src="../../../../CommonFiles/Buttons/BTN_PopUp.jpg" onclick='executeClick("PopUpsTransportProteinsT.html")'><span class="sr-only">PopUps</span>
+                <img class="btnHeader" id="btnExcerpts" src="../../../../CommonFiles/Buttons/BTN_Excerpts.jpg" onclick='executeClick("ExcerptsTransportProteinsT.html")'><span class="sr-only">Excerpts</span>
+                <img class="btnHeader" id="btnQuestions" src="../../../../CommonFiles/Buttons/BTN_Questions.jpg" onclick='executeClick("QuestionsTransportProteinsT.html")'><span class="sr-only">Practice Questions</span>
+                <img class="btnHeader" id="btnFeedback" src="../../../../CommonFiles/Buttons/BTN_Feedback.jpg" onclick='executeClick("FeedbackTransportProteinsT.html")'><span class="sr-only">Provide Feedback</span>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <li><button id="menu1" class="linksLarge">Permeability</button></li>
+                            <li><button id="menu2" class="linksSmall">Types of Transmembrane Passage</button></li>
+                            <li><button id="menu3" class="linksSmall">Facilitated Characteristics</button></li>
+                        <li><button id="menu4" class="linksLarge">Transport Proteins</button></li>
+                        <li><button id="menu5" class="linksLarge">Structure</button></li>
+                        <br>
+                        <li><button id="menu6" class="linksLarge">Classes</button></li>
+                            <li><button id="menu7" class="linksSmall">Channels</button></li>
+                            <li><button id="menu8" class="linksSmall">Transporters</button></li>
+                            <li><button id="menu9" class="linksSmall">ATPase Pumps</button></li>
+                        <br>
+                        <li><button id="menu10" class="linksLarge">Mechanism</button></li>
+                            <li><button id="menu11" class="linksSmall">Uniporters</button></li>
+                            <li><button id="menu12" class="linksSmall">Symporters</button></li>
+                            <li><button id="menu13" class="linksSmall">Antiporters</button></li>
+                            <li><button id="menu14" class="linksSmall">P Class Pumps</button></li>
+                    </ul>
+                </div>
+                <div class="group2">
+                    <ul class="menuLists">
+                        <br>
+                        <br>
+                        <li><button id="menu15" class="linksLarge">Examples</button></li>
+                            <li><button id="menu16" class="linksSmall">Membrane Asymmetry</button></li>
+                            <li><button id="menu17" class="linksSmall">Na/K ATPase</button></li>
+                            <li><button id="menu18" class="linksSmall">CFTR</button></li>
+                            <li><button id="menu19" class="linksSmall">Action Potential</button></li>
+                            <li><button id="menu20" class="linksSmall">Ca ATPase</button></li>
+                            <li><button id="menu21" class="linksSmall">Na/Ca Antiporter</button></li>
+                            <li><button id="menu22" class="linksSmall">Band 3 Anion Antiporter</button></li>
+                            <li><button id="menu23" class="linksSmall">Maintaining pH</button></li>
+                            <li><button id="menu24" class="linksSmall">Gastric HCL</button></li>
+                            <li><button id="menu25" class="linksSmall">Glucose Absorption</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footerLinks" >
+                <a onclick='executeClick("CitationsTransportProteinsT.html")'><span class="sr-only">Citations</span>Citations</a>
+            </div>
+        </div>
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='TransportProteinsT.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <img class="btnFooter" id="btnLessonMenu" src="../../../../CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='TransportProteinsT.html'"><span class="sr-only">Return to Main Menu</span>
+                <img class="btnFooter" id="btnBack" src="../../../../CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span>
+                <img class="btnFooter btnRate" id="btnSlower" src="../../../../CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')"><span class="sr-only">Speed Up</span>
+                <img class="btnFooter btnRate" id="btnFaster" src="../../../../CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')"><span class="sr-only">Slow Down</span>
+
+                <a><img class="btnFooter btnSide" id="btnSideFpump" src="Fpump/BTN_Fpump.jpg"><span class="sr-only">ATPase Pumps</span>
+            </div>
+        </div>
+
+        <div class="side" id="sideFpump">
+            <div class="sideAnimation" id="sideAnimationFpump" onclick="nextSlideSide()">
+                <video class="video" id="sideVideoFpump" muted autoplay nodownload>
+                    <source id="sideSrcFpump" src='Fpump/FpumpT.mp4' type="video/mp4">
+                    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <a><img class="btnFooter btnSideBack" id="btnSideBackFpump" src="../../../../CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span>
+            </div>
+        </div>
+    
+    </div>
+</body>
+
+<script src="TransportProteinsT_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../../CommonFiles/masterUIcontrol.js"></script>
+<script src="TransportProteinsT.js"></script>
+</html>

@@ -1,0 +1,113 @@
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="SkeletogenesisT" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterEmbryology.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/LessonSpecificStylesheets/Skeletogenesis.css">
+    <title>Skeletogenesis</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>Skeletogenesis</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viSkeletogenesis.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+                <a><img class="btnHeader" id="btnToCentralMenu" src="../../../..//CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick='executeClick("../../../CentralMenuT.html")'><span class="sr-only">Return to Main Menu</span></a>
+                <a><img class="btnHeader" id="btnTogTextLessonMenuX" src="../../../..//CommonFiles/Buttons/BTN_TogLessonMenuX.jpg" onclick='executeClick("../../../../TextX/LessonsX/EmbryologyX/SkeletogenesisX/SkeletogenesisX.html")'><span class="sr-only">Hide Explanatory Text</span></a>
+                <a><img class="btnHeader" id="btnToPopUps" src="../../../..//CommonFiles/Buttons/BTN_PopUp.jpg" onclick='executeClick("PopUpsSkeletogenesisT.html")'></img></a>
+                <a><img class="btnHeader" id="btnExcerpts" src="../../../..//CommonFiles/Buttons/BTN_Excerpts.jpg" onclick='executeClick("ExcerptsSkeletogenesisT.html")'><span class="sr-only">Excerpts</span></a>
+                <a><img class="btnHeader" id="btnQuestions" src="../../../..//CommonFiles/Buttons/BTN_Questions.jpg" onclick='executeClick("QuestionsSkeletogenesisT.html")'><span class="sr-only">Practice Questions</span></a>
+                <a><img class="btnHeader" id="btnFeedback" src="../../../..//CommonFiles/Buttons/BTN_Feedback.jpg" onclick='executeClick("FeedbackSkeletogenesisT.html")'><span class="sr-only">Provide Feedback</span></a>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <li><button id="menu1" class="linksLarge">Osteogenesis</button></li>
+                        <br>
+                        <br>
+                        <br>
+                        <li><button id="menu2" class="linksLarge">Axial Skeleton</button></li>
+                            <li><button id="menu3" class="linksSmall">Sclerotome</button></li>
+                            <li><button id="menu4" class="linksSmall">Resegmentation</button></li>
+                            <li><button id="menu5" class="linksSmall">Sclerotome Designation</button></li>
+                            <li><button id="menu6" class="linksSmall">Vertebra</button></li>
+                            <li><button id="menu7" class="linksSmall">Ribs</button></li>
+                            <li><button id="menu8" class="linksSmall">Sternum</button></li>
+                    </ul>
+                </div>
+
+                <div class="group2">
+                    <ul class="menuLists">
+                        <li><button id="menu9" class="linksLarge">Skull</button></li>
+                            <li><button id="menu10" class="linksSmall">Skull, Lateral</button></li>
+                            <li><button id="menu11" class="linksSmall">Skull, Base</button></li>
+                            <li><button id="menu12" class="linksSmall">Skull, Crown</button></li>
+                        <br>
+                        <br>
+                        <li><button id="menu13" class="linksLarge">Appendicular Skeleton</button></li>
+                            <li><button id="menu14" class="linksSmall">Limb Bud</button></li>
+                            <li><button id="menu15" class="linksSmall">Limb Bones</button></li>
+                            <li><button id="menu16" class="linksSmall">Long Bones</button></li>
+                            <li><button id="menu17" class="linksSmall">Synovial Joints</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footerLinks">
+               <a onclick='executeClick("CitationsSkeletogenesisT.html")'>Citations</a>
+            </div>
+        </div>
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='SkeletogenesisT.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <a><img class="btnFooter" id="btnLessonMenu" src="../../../..//CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='SkeletogenesisT.html'"><span class="sr-only">Return to Main Menu</span></a>
+                <a><img class="btnFooter" id="btnBack" src="../../../..//CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span></a>
+                <a><img class="btnFooter btnRate" id="btnSlower" src="../../../..//CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')"><span class="sr-only">Slow Down</span></a>
+                <a><img class="btnFooter btnRate" id="btnFaster" src="../../../..//CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')"><span class="sr-only">Speed Up</span></a>
+
+                <a><img class="btnFooter btnSide" id="btnSideLimbImages" src="LimbImages/BTN_LimbImages.jpg"><span class="sr-only">EM and Microphotographs of Developing Limbs</span></a>
+            </div>
+        </div>
+
+        <div class="side" id="sideLimbImages">
+            <div class="sideAnimation" id="sideAnimationLimbImages" onclick="nextSlideSide()">
+                <video class="video" id="sideVideoLimbImages" muted autoplay nodownload>
+                    <source id="sideSrcLimbImages" src='LimbImages/LimbImagesT.mp4' type="video/mp4">
+                    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <a><img class="btnFooter btnSideBack" id="btnSideBackLimbImages" src="../../../..//CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span></a>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="SkeletogenesisT_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../..//CommonFiles/masterUIcontrol.js"></script>
+<script src="SkeletogenesisT.js"></script>
+<script src="LimbImages/LimbImagesT_src_array.js"></script>
+</html>

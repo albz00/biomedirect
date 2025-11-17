@@ -1,0 +1,120 @@
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="DigestiveTractT" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterEmbryology.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/LessonSpecificStylesheets/DigestiveTract.css">
+    <title>DigestiveTract</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>Digestive Tract Morphogenesis</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viDigestiveTract.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+                <a><img class="btnHeader" id="btnToCentralMenu" src="../../../..//CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick='executeClick("../../../CentralMenuT.html")'><span class="sr-only">Return to Main Menu</span></a>
+                <a><img class="btnHeader" id="btnTogTextLessonMenuX" src="../../../..//CommonFiles/Buttons/BTN_TogLessonMenuX.jpg" onclick='executeClick("../../../../TextX/LessonsX/EmbryologyX/DigestiveTractX/DigestiveTractX.html")'><span class="sr-only">Hide Explanatory Text</span></a>
+                <a><img class="btnHeader" id="btnToPopUps" src="../../../..//CommonFiles/Buttons/BTN_PopUp.jpg" onclick='executeClick("PopUpsDigestiveTractT.html")'></img></a>
+                <a><img class="btnHeader" id="btnExcerpts" src="../../../..//CommonFiles/Buttons/BTN_Excerpts.jpg" onclick='executeClick("ExcerptsDigestiveTractT.html")'><span class="sr-only">Excerpts</span></a>
+                <a><img class="btnHeader" id="btnQuestions" src="../../../..//CommonFiles/Buttons/BTN_Questions.jpg" onclick='executeClick("QuestionsDigestiveTractT.html")'><span class="sr-only">Practice Questions</span></a>
+                <a><img class="btnHeader" id="btnFeedback" src="../../../..//CommonFiles/Buttons/BTN_Feedback.jpg" onclick='executeClick("FeedbackDigestiveTractT.html")'><span class="sr-only">Provide Feedback</span></a>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <li><button id="menu1" class="linksLarge">Folding</button></li>
+                        <li><button id="menu2" class="linksLarge">Elongation</button></li>
+                        <li><button id="menu3" class="linksLarge">Endodermal Distribution</button></li>
+                        <br>
+                        <br>
+                        <li><button id="menu4" class="linksLarge">Overview</button></li>
+                            <li><button id="menu5" class="linksSmall">Coiling</button></li>
+                            <li><button id="menu6" class="linksSmall">Appendix</button></li>
+                            <li><button id="menu7" class="linksSmall">Cloaca</button></li>
+                        <br>
+                        <br>
+                        <li><button id="menu8" class="linksLarge">Body Cavities</button></li>
+                        <li><button id="menu9" class="linksLarge">Rotations & Mesenteries</button></li>
+                            <li><button id="menu10" class="linksSmall">Stomach</button></li>
+                            <li><button id="menu11" class="linksSmall">Pancreas & Bile Duct</button></li>
+                        <br>
+                        <br>
+                        <li><button id="menu12" class="linksLarge">Fusions</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footerLinks" >
+               <a onclick='executeClick("CitationsDigestiveTractT.html")'>Citations</a>
+            </div>
+        </div>
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='DigestiveTractT.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <a><img class="btnFooter" id="btnLessonMenu" src="../../../..//CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='DigestiveTractT.html'"><span class="sr-only">Return to Main Menu</span></a>
+                <a><img class="btnFooter" id="btnBack" src="../../../..//CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span></a>
+                <a><img class="btnFooter btnRate" id="btnSlower" src="../../../..//CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')"><span class="sr-only">Slow Down</span></a>
+                <a><img class="btnFooter btnRate" id="btnFaster" src="../../../..//CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')"><span class="sr-only">Speed Up</span></a>
+
+                <a><img class="btnFooter btnSide" id="btnSideDiaphragm" src="Diaphragm/BTN_Diaphragm.jpg"><span class="sr-only">Morphogenesis of the Diaphragm, Ancillary Lesson</span></a>
+                <a><img class="btnFooter btnSide" id="btnSideFusions" src="Fusions/BTN_Fusions.jpg"><span class="sr-only">Fusions of Abdominal Mesenteries</span></a>
+            </div>
+        </div>
+    </div>
+
+        <!-- SideLesson  -->
+        <div class="side" id="sideDiaphragm">
+            <div class="sideAnimation" id="sideAnimationDiaphragm" onclick="nextSlideSide()">
+                <video class="video" id="sideVideoDiaphragm" muted autoplay nodownload>
+                    <source id="sideSrcDiaphragm" src='Diaphragm/DiaphragmT.mp4' type="video/mp4">
+                    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <a><img class="btnFooter btnSideBack" id="btnSideBackDiaphragm" src="../../../..//CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span></a>
+            </div>
+        </div>
+
+        <div class="side" id="sideFusions">
+            <div class="sideAnimation" id="sideAnimationFusions" onclick="nextSlideSide()">
+                <video class="video" id="sideVideoFusions" muted autoplay nodownload>
+                    <source id="sideSrcFusions" src='Fusions/FusionsT.mp4' type="video/mp4">
+                    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <a><img class="btnFooter btnSideBack" id="btnSideBackFusions" src="../../../..//CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span></a>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="DigestiveTractT_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../..//CommonFiles/masterUIcontrol.js"></script>
+<script src="DigestiveTractT.js"></script>
+<script src="Diaphragm/DiaphragmT_src_array.js"></script>
+<script src="Fusions/FusionsT_src_array.js"></script>
+</html>

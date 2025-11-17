@@ -1,0 +1,86 @@
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="TrilaminarT" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterEmbryology.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/LessonSpecificStylesheets/Trilaminar.css">
+    <title>Trilaminar</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>Trilaminar Stage</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viTrilaminar.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+                <a><img class="btnHeader" id="btnToCentralMenu" src="../../../..//CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick='executeClick("../../../CentralMenuT.html")'><span class="sr-only">Return to Main Menu</span></a>
+                <a><img class="btnHeader" id="btnTogTextLessonMenuX" src="../../../..//CommonFiles/Buttons/BTN_TogLessonMenuX.jpg" onclick='executeClick("../../../../TextX/LessonsX/EmbryologyX/TrilaminarX/TrilaminarX.html")'><span class="sr-only">Hide Explanatory Text</span></a>
+                <a><img class="btnHeader" id="btnToPopUps" src="../../../..//CommonFiles/Buttons/BTN_PopUp.jpg" onclick='executeClick("PopUpsTrilaminarT.html")'></img></a>
+                <a><img class="btnHeader" id="btnExcerpts" src="../../../..//CommonFiles/Buttons/BTN_Excerpts.jpg" onclick='executeClick("ExcerptsTrilaminarT.html")'><span class="sr-only">Excerpts</span></a>
+                <a><img class="btnHeader" id="btnQuestions" src="../../../..//CommonFiles/Buttons/BTN_Questions.jpg" onclick='executeClick("QuestionsTrilaminarT.html")'><span class="sr-only">Practice Questions</span></a>
+                <a><img class="btnHeader" id="btnFeedback" src="../../../..//CommonFiles/Buttons/BTN_Feedback.jpg" onclick='executeClick("FeedbackTrilaminarT.html")'><span class="sr-only">Provide Feedback</span></a>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <li><button id="menu1" class="linksLarge">Bilaminar Germ Disc</button></li>
+                        <li><button id="menu2" class="linksLarge">Primitive Streak Elongation</button></li>
+                        <li><button id="menu3" class="linksLarge">Invagination</button></li>
+                        <li><button id="menu4" class="linksLarge">Layer Continuity</button></li>
+                        <li><button id="menu5" class="linksLarge">Hensen's Node</button></li>
+                        <li><button id="menu6" class="linksLarge">Epiblast Migration</button></li>
+                        <li><button id="menu7" class="linksLarge">Endoderm & Mesoderm Deposition</button></li>
+                        <br>
+                        <li><button id="menu8" class="linksLarge">The Notochord</button></li>
+                            <li><button id="menu9" class="linksSmall">Ingression of the Process</button></li>
+                            <li><button id="menu10" class="linksSmall">Morphogenesis, Sagittal View</button></li>
+                            <li><button id="menu11" class="linksSmall">Morphogenesis, Dorsal View</button></li>
+                            <li><button id="menu12" class="linksSmall">Morphogenesis, Caudal End</button></li>
+                        <br>
+                        <li><button id="menu13" class="linksLarge">Overview</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footerLinks">
+               <a onclick='executeClick("CitationsTrilaminarT.html")'>Citations</a>
+            </div>
+        </div>
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='TrilaminarT.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <a><img class="btnFooter" id="btnLessonMenu" src="../../../..//CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='TrilaminarT.html'"><span class="sr-only">Return to Main Menu</span></a>
+                <a><img class="btnFooter" id="btnBack" src="../../../..//CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span></a>
+                <a><img class="btnFooter btnRate" id="btnSlower" src="../../../..//CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')"><span class="sr-only">Slow Down</span></a>
+                <a><img class="btnFooter btnRate" id="btnFaster" src="../../../..//CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')"><span class="sr-only">Speed Up</span></a>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="TrilaminarT_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../..//CommonFiles/masterUIcontrol.js"></script>
+<script src="TrilaminarT.js"></script>
+</html>

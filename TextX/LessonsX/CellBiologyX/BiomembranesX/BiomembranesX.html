@@ -1,0 +1,94 @@
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="BiomembranesX" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterCellBiology.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/LessonSpecificStylesheets/Biomembranes.css">
+    <title>Biomembranes</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>Biomembranes</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viBiomembranes.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+               <img class="btnHeader" id="btnToCentralMenu" src="../../../../CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick='executeClick("../../../CentralMenuX.html")'><span class="sr-only">Return to Main Menu</span>
+               <img class="btnHeader" id="btnTogTextLessonMenuT" src="../../../../CommonFiles/Buttons/BTN_TogLessonMenuT.jpg" onclick='executeClick("../../../../TextT/LessonsT/CellBiologyT/BiomembranesT/BiomembranesT.html")'><span class="sr-only">Show Explanatory Text</span>
+               <img class="btnHeader" id="btnToPopUps" src="../../../../CommonFiles/Buttons/BTN_PopUp.jpg" onclick='executeClick("PopUpsBiomembranesX.html")'><span class="sr-only">PopUps</span>
+               <img class="btnHeader" id="btnExcerpts" src="../../../../CommonFiles/Buttons/BTN_Excerpts.jpg" onclick='executeClick("ExcerptsBiomembranesX.html")'><span class="sr-only">Excerpts</span>
+               <img class="btnHeader" id="btnQuestions" src="../../../../CommonFiles/Buttons/BTN_Questions.jpg" onclick='executeClick("QuestionsBiomembranesX.html")'><span class="sr-only">Practice Questions</span>
+               <img class="btnHeader" id="btnFeedback" src="../../../../CommonFiles/Buttons/BTN_Feedback.jpg" onclick='executeClick("FeedbackBiomembranesX.html")'><span class="sr-only">Provide Feedback</span>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <li><button id="menu1" class="linksLarge">Polar and Hydrogen Bonds</button></li>
+                        <li><button id="menu2" class="linksLarge">Water Lattice </button></li>
+                        <li><button id="menu3" class="linksLarge">Hydrocarbons in Water</button></li>
+                        <li><button id="menu4" class="linksLarge">van der Waals Forces</button></li>
+                        <li><button id="menu5" class="linksLarge">Phospholipids</button></li>
+                        <li><button id="menu6" class="linksLarge">Polar Heads</button></li>
+                        <li><button id="menu7" class="linksLarge">Micelles</button></li>
+                        <li><button id="menu8" class="linksLarge">Monolayer</button></li>
+                        <li><button id="menu9" class="linksLarge">Bilayer</button></li>
+                        <li><button id="menu10" class="linksLarge">Vesicle</button></li>
+                    </ul>
+                </div>
+                <div class="group2">
+                    <ul class="menuLists">
+                        <br>
+                        <li><button id="menu11" class="linksLarge">No Flip Flop</button></li>
+                        <li><button id="menu12" class="linksLarge">Asymmetry</button></li>
+                        <li><button id="menu13" class="linksLarge">Fluid Mosaic Model</button></li>
+                        <li><button id="menu14" class="linksLarge">Cholesterol</button></li>
+                        <li><button id="menu15" class="linksLarge">Hydrocarbon Saturation</button></li>
+                        <li><button id="menu16" class="linksLarge">Permeability</button></li>
+                        <li><button id="menu17" class="linksLarge">The Cell</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+<!--             <div class="footerLinks" >
+                <a onclick='executeClick("CitationsBiomembranesX.html")'><span class="sr-only">Citations</span>Citations
+            </div> -->
+        </div> 
+
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='BiomembranesX.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+               <img class="btnFooter" id="btnLessonMenu" src="../../../../CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='BiomembranesX.html'"><span class="sr-only">Return to Main Menu</span>
+               <img class="btnFooter" id="btnBack" src="../../../../CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span>
+               <img class="btnFooter btnRate" id="btnSlower" src="../../../../CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')"><span class="sr-only">Speed Up</span>
+               <img class="btnFooter btnRate" id="btnFaster" src="../../../../CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')"><span class="sr-only">Slow Down</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="BiomembranesX_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../../CommonFiles/masterUIcontrol.js"></script>
+<script src="BiomembranesX.js"></script>
+</html>

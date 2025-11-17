@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="IntermediateFilamentsX" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterCellBiology.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/LessonSpecificStylesheets/IntermediateFilaments.css">
+    <title>IntermediateFilaments</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>Intermediate Filaments</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viIntermediateFilaments.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+                <img class="btnHeader" id="btnToCentralMenu" src="../../../../CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick='executeClick("../../../CentralMenuX.html")'><span class="sr-only">Return to Main Menu</span>
+                <img class="btnHeader" id="btnTogTextLessonMenuT" src="../../../../CommonFiles/Buttons/BTN_TogLessonMenuT.jpg" onclick='executeClick("../../../../TextT/LessonsT/CellBiologyT/IntermediateFilamentsT/IntermediateFilamentsT.html")'><span class="sr-only">Hide Explanatory Text</span>
+                <img class="btnHeader" id="btnToPopUps" src="../../../../CommonFiles/Buttons/BTN_PopUp.jpg" onclick='executeClick("PopUpsIntermediateFilamentsT.html")'><span class="sr-only">PopUps</span>
+                <img class="btnHeader" id="btnExcerpts" src="../../../../CommonFiles/Buttons/BTN_Excerpts.jpg" onclick='executeClick("ExcerptsIntermediateFilamentsX.html")'><span class="sr-only">Excerpts</span>
+                <img class="btnHeader" id="btnQuestions" src="../../../../CommonFiles/Buttons/BTN_Questions.jpg" onclick='executeClick("QuestionsIntermediateFilamentsX.html")'><span class="sr-only">Practice Questions</span>
+                <img class="btnHeader" id="btnFeedback" src="../../../../CommonFiles/Buttons/BTN_Feedback.jpg" onclick='executeClick("FeedbackIntermediateFilamentsX.cfm")'><span class="sr-only">Provide Feedback</span>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <li><button id="menu1" class="linksLarge">Assembly, Strurcture</button></li>
+                        <li><button id="menu2" class="linksLarge">Homologous Classes</button></li>
+                        <br>
+                        <br>
+                        <br>
+                        <li><button id="menu3" class="linksLarge">Class I & II, Keratins</button></li>
+                            <li><button id="menu4" class="linksSmall">Soft Keratins</button></li>
+                            <li><button id="menu5" class="linksSmall">Hard Keratins</button></li>
+                        <br>
+                        <li><button id="menu6" class="linksLarge">Class III, Desmin</button></li>
+                        <li><button id="menu7" class="linksLarge">Class IV, Neurofilaments</button></li>
+                        <li><button id="menu8" class="linksLarge">Class V, Nuclear Lamins</button></li>
+                            <li><button id="menu9" class="linksSmall">Nucleoskeleton-Cytoskeleton</button></li>
+                            <li><button id="menu10" class="linksSmall">Nuclear Envelope Breakdown</button></li>
+                        <br>
+                        <li><button id="menu11" class="linksLarge">Class VI, 4 Specialized IFs</button></li>
+                        <br>
+                        <br>
+                        <br>
+                        <li><button id="menu12" class="linksLarge">Cancer Diagnosis</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footerLinks" >
+                <a onclick='executeClick("CitationsIntermediateFilamentsX.html")'><span class="sr-only">Citations</span>Citations</a>
+            </div>
+        </div>
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='IntermediateFilamentsX.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <img class="btnFooter" id="btnLessonMenu" src="../../../../CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='IntermediateFilamentsX.html'"><span class="sr-only">Return to Main Menu</span>
+                <img class="btnFooter" id="btnBack" src="../../../../CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span>
+                <img class="btnFooter btnRate" id="btnSlower" src="../../../../CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')"><span class="sr-only">Speed Up</span>
+                <img class="btnFooter btnRate" id="btnFaster" src="../../../../CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')"><span class="sr-only">Slow Down</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="IntermediateFilamentsX_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../../CommonFiles/masterUIcontrol.js"></script>
+<script src="IntermediateFilamentsX.js"></script>
+</html>

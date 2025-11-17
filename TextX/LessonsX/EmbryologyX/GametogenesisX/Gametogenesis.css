@@ -1,0 +1,263 @@
+header {
+	padding-top: 5vmin;
+	padding-left: 2vw;
+	padding-right: 2vw;
+	padding-bottom: 1vw;
+}
+
+h1 {
+	font-family: Cooper Black, Arial Rounded MT;
+	font-size: 9vmin;
+	line-height: 100%;
+	color: #53E1CD;
+	margin: auto;
+	text-shadow: -3px -3px 0 #0000B2, 3px -3px 0 #0000B2, -3px 3px 0 #0000B2, 3px 3px 0 #0000B2;
+}
+
+body {
+	background-color: black;
+}
+
+.lessonMenuPage {
+	background: url('../Images/EmbryologyBackground.jpg');
+	background-repeat: no-repeat;
+	background-size: 100%;
+	width: 100vw;
+	height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
+	max-height: 100vh;
+	max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
+	position: absolute;
+	margin: auto;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	text-align: center;
+    display: block;
+}
+
+.lessonMenu {
+	display: grid;
+	grid-template-columns: auto auto;
+	grid-gap: 2min 0vmin;
+}
+
+.lessonMenu > div {
+	line-height: 1vmin;
+}
+
+/* grid-row-start / grid-column-start / grid-row-end / grid-column-end */
+
+.group1 {
+	grid-area: 1 / 1 / 3;
+}
+
+.group2 {
+	grid-area: 1 / 2;
+}
+
+.menuLists {
+	position: relative;
+	padding: 0;
+	margin: 2.5vmin 0;
+	list-style-type: none;
+	align-content: center;
+}
+
+.subMenuLists {
+	position: relative;
+	padding: 0;
+	list-style-type: none;
+	width: 100%;
+	align-content: center;
+}
+
+button.linksLarge {
+	font-family: Arial Rounded MT, san-serif;
+	color: #02E8E5;
+	background: transparent;
+	border: none;
+	text-decoration: none;
+	font-weight: bold;
+	font-size: 5vmin;
+	padding: 0;
+}
+
+button:hover.linksLarge {
+	color: #9DFFFF;
+	cursor: pointer;
+    letter-spacing: 0.1vmin;
+	/*font-size: 4vmin;*/
+}
+
+button:active.linksLarge {
+	cursor: pointer;
+	/*font-size: 2.5vmin*/; /* results in misclick when text shrinks*/
+}
+
+button.linksSmall {
+	font-family: Arial Rounded MT, san-serif;
+	color: #02E8E5;
+	background: transparent;
+	border: none;
+	text-decoration: none;
+	font-weight: bold;
+	font-size: 3.5vmin;
+	padding: 0;
+}
+
+button:hover.linksSmall {
+	color: #9DFFFF;
+	cursor: pointer;
+    letter-spacing: 0.1vmin;
+	/*font-size: 3.5vmin;*/
+}
+
+button:active.linksSmall {
+	cursor: pointer;
+	/*font-size: 2vmin;*/ /* results in misclick when text shrinks*/
+}
+
+button:active {
+    outline: none !important;
+}
+
+button:focus {
+    outline: none !important;
+}
+
+.footerLinks {
+	font-family: Arial;
+	font-size: 3vmin;
+	position: absolute;
+	width: 100vw;
+	max-width: 137.5vh;
+	text-align: center;
+	align-content: center;
+	bottom: 8vmin;
+}
+
+.footerLinks > a:link {
+	color: #babdea;
+    padding-left: 0.1vw;
+    padding-right: 0.1vw;
+}
+
+.footerLinks > a:visited {
+	color: #4f58c9;
+}
+
+.footerLinks > a:hover {
+	color: #A137BB;
+}
+
+.footerLinks > a:active {
+	color: #8285DF;
+}
+
+/* https://css-tricks.com/aspect-ratio-boxes/ */
+
+.lesson {
+	width: 100vw;
+	height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
+	max-height: 100vh;
+	max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
+	position: absolute;
+	margin: auto;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	background-color: black;
+    display: none;
+    overflow: hidden;
+}
+
+/* Animation Field */
+.video {
+	text-align: center;
+	align-content: center;
+	z-index: 0;
+	position: absolute;
+	overflow: hidden;
+	height: 98%;
+	top: 2vh;
+	left: -20vmin;
+}
+
+.headBank {
+	padding-top: 0.6vh; 
+	z-index: 1;
+}
+
+.btnHeader{
+	height: 4.5vh;
+	position: relative;
+}
+
+.lessonButtons {
+    width: 100%;
+	position: absolute;
+	bottom: 1vmin;
+	z-index: 1;
+}
+
+.btnFooter {
+	float: left;
+	height: 5.9vh;
+	position: relative;  /* Relative to video field */
+}
+
+.btnRate {
+    float: left;
+	height: 5.9vh;
+	position: relative;  /* Relative to video field */
+}
+
+.btnSide {
+	float: right;
+	height: 5.9vh;
+	padding-right: 2vw;
+	display: none;
+}
+
+.side {
+	width: 100vw;
+	height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
+	max-height: 100vh;
+	max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
+	position: absolute;
+	margin: auto;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	background-color: black;
+	display: none;
+    overflow: hidden;
+}
+
+/* ideally use JS to check for aspect ratio of menuLists? */
+@media (max-aspect-ratio: 1650/1300) {
+    h1 {
+        font-size: 7vmin;
+    }
+    
+	button.linksLarge {
+		font-size: 3vmin !important;
+	}
+
+	button.linksSmall {
+		font-size: 2.5vmin !important;
+	}
+    
+    .video {
+        left: -15vmin !important;
+        top: 0.5vh !important;
+    }
+}
+
+@media (max-width: 200px) {
+	/* size when things break/overflow */
+	/* not sure who wants to view at <200px though... */
+}

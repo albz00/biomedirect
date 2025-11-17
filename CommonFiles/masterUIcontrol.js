@@ -1,12 +1,42 @@
 var currentSlide = 0; // == freezeFrame - 1
 var clickedLink = false; // added to allow for display difference when link is clicked
-const lastSlide = srcArray.length; // see note below
-const firstSlide = 0;
+var lastSlide; // Will be set after srcArray is loaded
+var firstSlide = 0;
 
 // Need to add 1 to lastSlide to account for extra click to return to menu at end
 
-// Pause all videos upon loading
-videoId.pause();
+// Initialize function - called after srcArray is loaded
+function initializePlayer(videoUrl, srcArray) {
+    // Set as global so other parts of the code can still reference it
+    window.srcArray = srcArray;
+    window.videoUrl = videoUrl;  // make video globally accessible
+    
+    // Set the video source
+    document.getElementById("videoId").src = videoUrl;
+    
+    lastSlide = srcArray.length; // see note below
+    // Pause all videos upon loading
+    videoId.pause();
+    
+    // Listener to pause video when reach specified time and implements looping // FindMe4
+    videoId.addEventListener("timeupdate", function(){
+        if(this.currentTime >= srcArray[currentSlide].src_end){
+            // if next slide is a loop, then autoplay next slide
+            if (currentSlide + 1 < lastSlide &&
+                srcArray[currentSlide + 1].loop) {
+                currentSlide++;
+                updateVideoId(true);
+            }
+            // if current slide is a loop, then loop
+            else if (srcArray[currentSlide].loop) {
+                updateVideoId(true);
+            }
+            else {
+                this.pause();
+            }
+        }
+    });
+}
 
 // Variable for controling menu. menuFrame is what animation will be shown when the menu appears. Can be set to anything supported by video tag
 // var menu=document.getElementById("lessonMenuPage");
@@ -127,25 +157,6 @@ function update(playVid){ // FindMe2
         }  
     }
 }
-
-// Listener to pause video when reach specified time and implements looping // FindMe4
-videoId.addEventListener("timeupdate", function(){
-	if(this.currentTime >= srcArray[currentSlide].src_end){
-		// if next slide is a loop, then autoplay next slide
-		if (currentSlide + 1 < lastSlide &&
-			srcArray[currentSlide + 1].loop) {
-			currentSlide++;
-			updateVideoId(true);
-		}
-		// if current slide is a loop, then loop
-		else if (srcArray[currentSlide].loop) {
-			updateVideoId(true);
-		}
-		else {
-			this.pause();
-        }
-	}
-});
 
 //Adds one to currentSlide, i.e. defines currentSlide as the next stop point
 function nextSlide(){ // FindMe1

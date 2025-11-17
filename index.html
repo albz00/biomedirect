@@ -27,9 +27,29 @@
                     text-align: center;
 				 }
             </style>
+        <!-- Firebase SDKs -->
+        <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 	</head>
     <body>
         <image class="disclaimer" id="disclaimer" src="CommonFiles/Images/Disclaimer.jpg" onclick="window.location.href= 'TextT/CentralMenuT.html'">
-        <script type="module" src="test-firestore.js"></script>
+        <script>
+            const firebaseConfig = {
+                apiKey: "AIzaSyB0KbGW-4znfF19ikrUahdCyd_bEungkH4",
+                authDomain: "biome-865cc.firebaseapp.com",
+                projectId: "biome-865cc",
+                storageBucket: "biome-865cc.firebasestorage.app",
+                messagingSenderId: "952652458408",
+                appId: "1:952652458408:web:23e7f0689e9cf973be959d"
+            };
+
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+
+            // Temporary test code for Firestore
+            db.collection("test").doc("hello").get().then(doc => {
+                console.log("Firestore says:", doc.data());
+            });
+        </script>
     </body>
 </html> 

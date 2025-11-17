@@ -1,0 +1,95 @@
+.entireFeedbackPage {
+    font-family: Arial, sans-serif;
+    font-size: 1.39vw;
+    color: darkblue;
+    width: 90vw;
+    height: 61.81vw; /* (1020/1650) * 100 */
+    max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
+    max-height: 89.7vh;
+    border-color: darkcyan;
+    border-width: 4vmin;
+    border-left-style: ridge;
+    border-top-style: ridge;
+    border-right-style: groove;
+    border-bottom-style: groove;
+    margin: auto;
+    overflow: auto;
+    align-content: center;
+}
+
+h1 {
+    font-family: Arial Rounded MT, sans-serif;
+    font-size: 6vmin;
+    font-weight: bolder;
+    text-align: center;
+    line-height: 1vmin;
+}
+
+h2, .h2 {
+    font-family: arial black, sans-serif;
+    font-size: 8vmin;
+    font-weight: bolder;
+    text-align: center;
+    line-height: 1vmin;
+}
+
+h3 {
+    font-family: Arial Rounded MT, sans-serif;
+    font-size: 6vmin;
+    font-weight: bolder;
+    text-align: center;
+    line-height: 1vmin;
+}
+.heading {
+    padding-top: 0vmin;
+    padding-bottom: 3.5vmin;
+}
+
+p {
+    font-size: 2.8vmin;
+    line-height: 3.7vmin;
+}
+
+#likertPrompt {
+    padding-top: 0.5vw;
+    padding-bottom: 0.9vw;
+}
+
+#likertPrompt > p {
+    text-align: center;
+    margin: 0;
+}
+
+.likertInputTable {
+    text-align: center;
+    font-size: 3.5vmin;
+    margin: auto;
+}
+
+.likertInputTable th, td {
+    font-weight: bolder;
+    padding: 0 0.5vw;
+}
+
+#critiquePrompt {
+    text-align: center;
+    padding-left: 0.5vw;
+    padding-right: 0.5vw;
+    padding-bottom: 0.2vw;
+}
+
+.critiqueArea {
+    width: 80%;
+    height: 10vw;
+}
+
+.btnSubmit {
+    text-align: center;
+}
+
+#btnSubmitId {
+    font-size: 1.5vw;
+    width: 6.1vw;
+    height: 2.3vw;
+    text-align: center;
+}

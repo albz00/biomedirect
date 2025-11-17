@@ -1,0 +1,137 @@
+.entireQuestionsPage {
+    font-family: Arial Rounded MT Bold, sans-serif;
+    font-size: 1.3vw;
+    color: darkblue;
+    width: 90vw;
+    height: 72.72vw;
+    max-width: 160vh;
+    max-height: 89.7vh;
+    border-color: darkcyan;
+    border-width: 2vw;
+    border-left-style: ridge;
+    border-top-style: ridge;
+    border-right-style: groove;
+    border-bottom-style: groove;
+    margin: auto;
+    overflow: auto;
+}
+
+header {
+    text-align: center;
+    line-height: 0vw;
+}
+
+h1 {
+    font-family: arial black, sans-serif;
+    font-size: 3.5vw;
+    line-height: 0vmin;
+    font-weight: bolder;
+    padding-bottom: 0.6vw;
+    text-align: center;
+}
+
+h2 {    /* Embryology */
+    font-family: Cooper Black, arial black;
+    font-size: 4.5vw;
+    line-height: 0vmin;
+    font-weight: bolder;
+    padding-bottom: 0.6vw;
+    text-align: center;
+}
+
+button {
+    font-size: 0.8vw;
+    cursor: pointer;
+}
+
+.attemptCounter {
+    line-height: 0vmin;
+    font-weight: lighter;
+    text-align: center;
+    padding-bottom: 0.5vw;
+}
+
+.quizContainer {
+    margin-left: 1vw;
+    margin-right: 1vw;
+}
+
+.questionSlide {
+    z-index: 1;
+    opacity: 0;
+    display: none;
+    /*transition: opacity 0.5s; after so many tweaks the transition fade now is non-functional */
+}
+
+.activeSlide {
+    opacity: 1;
+    z-index: 2;
+    display: block !important;
+}
+
+.question {
+    font-weight: bold;
+    text-align: left;
+    padding-top: 1.5vw;
+    padding-bottom: 0.5vw;
+}
+
+.ansChoice {
+    font-size: 1.2vw;
+    text-align: left;
+    margin: 1vw;
+    display: block;
+}
+
+.correct {
+    cursor: default;
+    color: green;
+}
+
+.incorrect {
+    cursor: default;
+    color: red;
+}
+
+.explain {
+    margin-top: 2vw;
+    margin-bottom: 2vw;
+    margin-left: 1vw;
+}
+
+.navigation {
+    font-size: 0.7vw;
+    display: flex;
+    justify-content: center;
+}
+
+.nav {
+    font-weight: bolder;
+}
+
+#nextArrow {
+    margin-left: 1.7vw;
+    margin-right: 1.7vw;
+}
+
+#fixed-width-image {    width: 300px;   }
+
+@media (max-aspect-ratio: 1650/1400) {
+    h1 {
+        line-height: 2vh;
+    }
+    
+    h2 {
+        line-height: 2vh;
+    }
+    
+    body {
+        border-width: 3vw;
+    }
+}
+
+@media (min-aspect-ratio: 1650/1400) {
+    body {
+        border-width: 3vh;
+    }
+}

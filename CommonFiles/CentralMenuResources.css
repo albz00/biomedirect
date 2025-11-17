@@ -1,0 +1,103 @@
+.citationsMain {
+    /* font-family: Arial Rounded MT Black, sans-serif; */
+    color: darkblue;
+    width: 90vw;
+	height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
+	max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
+	max-height: 89.7vh;
+    border-color: darkcyan;
+    border-width: 2.5vmin;
+    border-left-style: ridge;
+    border-top-style: ridge;
+    border-right-style: groove;
+    border-bottom-style: groove;
+    margin: auto;
+    position: relative;
+}
+
+.citationsHeading {
+    height: 11%;
+}
+
+.citationsContent {
+    position: absolute;
+    overflow: auto;
+    height: 80%;
+    width: 97.1%;
+    padding-left: 4vmin;
+}
+
+/* http://jsfiddle.net/c6oLrztm/1/ */
+
+/* for L text align w/ R img align inline - float img, none for text */
+
+p.head {
+    font-family: Cooper Black, Arial Rounded MT;
+    font-size: 5.5vmin;
+    font-weight: bold;
+    line-height: 2.4vmin;
+    position: relative;
+    text-align: left;
+    padding-left: 6vmin;
+    padding-top: 1vmin;
+}
+
+.nav-btn {
+    float: right;
+    display: inline-block;
+    position: relative;
+    max-height: 10vmin;
+    max-width: 10vmin;
+    padding-right: 2vmin;
+    margin-top: -1vmin; /* aligns middle of img with text */
+}
+
+/* Citation Specific */
+p.ref {
+    font-family: Arial Rounded MT, sans-serif;
+    font-size: 3vmin;
+    line-height: 4vmin;
+    position: relative;
+    text-align: left;
+    margin-right: 2vmin;
+    margin-left: 4vmin;
+    text-indent: -2em;
+}
+
+.table-links > a:link {
+    color: #8C5AAF;
+}
+
+.table-links > a:hover {
+    color: blue;
+}
+
+.table-links > a:active {
+    color: #CA81FF;
+}
+/*
+.table-links > a:visited {
+    color: peru;
+}
+*/
+table {
+    margin: 1vmin;
+    border-spacing: 0 -5vmin;
+    display: block;
+}
+
+td {
+    padding: 1vmin 3vmin;
+    text-align: center;
+    word-wrap:break-word;
+}
+
+@media (min-aspect-ratio: 1650/1300) {
+    /* p.head {
+        font-size: 1.75vw !important; 
+    } 
+    
+    p.ref {
+        font-size: 1vw;
+    } */
+}

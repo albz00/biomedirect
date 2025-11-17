@@ -1,0 +1,96 @@
+html<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="ExtracellularMatrixT" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterCellBiology.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/LessonSpecificStylesheets/ExtracellularMatrix.css">
+    <title>ExtracellularMatrix</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>Extracellular Matrix</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viExtracellularMatrix.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+               <img class="btnHeader" id="btnToCentralMenu" src="../../../../CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick='executeClick("../../../CentralMenuT.html")'><span class="sr-only">Return to Main Menu</span>
+               <img class="btnHeader" id="btnTogTextLessonMenuX" src="../../../../CommonFiles/Buttons/BTN_TogLessonMenuX.jpg" onclick='executeClick("../../../../TextX/LessonsX/CellBiologyX/ExtracellularMatrixX/ExtracellularMatrixX.html")'><span class="sr-only">Hide Explanatory Text</span>
+               <img class="btnHeader" id="btnToPopUps" src="../../../../CommonFiles/Buttons/BTN_PopUp.jpg" onclick='executeClick("PopUpsExtracellularMatrixT.html")'><span class="sr-only">PopUps</span>
+               <img class="btnHeader" id="btnExcerpts" src="../../../../CommonFiles/Buttons/BTN_Excerpts.jpg" onclick='executeClick("ExcerptsExtracellularMatrixT.html")'><span class="sr-only">Excerpts</span>
+               <img class="btnHeader" id="btnQuestions" src="../../../../CommonFiles/Buttons/BTN_Questions.jpg" onclick='executeClick("QuestionsExtracellularMatrixT.html")'><span class="sr-only">Practice Questions</span>
+               <img class="btnHeader" id="btnFeedback" src="../../../../CommonFiles/Buttons/BTN_Feedback.jpg" onclick='executeClick("FeedbackExtracellularMatrixT.html")'><span class="sr-only">Provide Feedback</span>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <li><button id="menu1" class="linksLarge">ECM Introduction</button></li>
+                        <br>
+                        <li><button id="menu2" class="linksLarge">Collagen</button></li>
+                            <li><button id="menu3" class="linksSmall">Triple Helix</button></li>
+                            <li><button id="menu4" class="linksSmall">Sequence</button></li>
+                            <li><button id="menu5" class="linksSmall">Crosslinks</button></li>
+                            <li><button id="menu6" class="linksSmall">Striation</button></li>
+                            <li><button id="menu7" class="linksSmall">Assembly</button></li>
+                            <li><button id="menu8" class="linksSmall">Diversity</button></li>
+                            <li><button id="menu9" class="linksSmall">Defects</button></li>
+                    </ul>
+                </div>
+                <div class="group2">
+                    <ul class="menuLists">
+                        <li><button id="menu10" class="linksLarge">Elastin</button></li>
+                            <li><button id="menu11" class="linksSmall">Meshwork</button></li>
+                            <li><button id="menu12" class="linksSmall">Desmosine</button></li>
+                            <li><button id="menu13" class="linksSmall">Stretching</button></li>
+                            <li><button id="menu14" class="linksSmall">Defects</button></li>
+                        <br>
+                        <li><button id="menu15" class="linksLarge">Proteoglycans</button></li>
+                            <li><button id="menu16" class="linksSmall">Glycosaminoglycans</button></li>
+                            <li><button id="menu17" class="linksSmall">Hyaluronan</button></li>
+                            <li><button id="menu18" class="linksSmall">Aggrecan</button></li>
+                            <li><button id="menu19" class="linksSmall">Crosslinking</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footerLinks" >
+                <a onclick='executeClick("CitationsExtracellularMatrixT.html")'><span class="sr-only">Citations</span>Citations</a>
+            </div>
+        </div>
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='ExtracellularMatrixT.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <img class="btnFooter" id="btnLessonMenu" src="../../../../CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='ExtracellularMatrixT.html'"><span class="sr-only">Return to Main Menu</span>
+                <img class="btnFooter" id="btnBack" src="../../../../CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span>
+                <img class="btnFooter btnRate" id="btnSlower" src="../../../../CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')"><span class="sr-only">Speed Up</span>
+                <img class="btnFooter btnRate" id="btnFaster" src="../../../../CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')"><span class="sr-only">Slow Down</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="ExtracellularMatrixT_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../../CommonFiles/masterUIcontrol.js"></script>
+<script src="ExtracellularMatrixT.js"></script>
+</html>

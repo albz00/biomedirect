@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="PracticePedigreeRecognitionT" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterGenetics.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/LessonSpecificStylesheets/PracticePedigreeRecognition.css">
+    <title>PracticePedigreeRecognition</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>Practice Pedigree Recognition</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viPracticePedigreeRecognition.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+                <a><img class="btnHeader" id="btnToCentralMenu" src="../../../..//CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick='executeClick("../../../CentralMenuT.html")'><span class="sr-only">Return to Main Menu</span></a>
+                <a><img class="btnHeader" id="btnTogTextLessonMenuX" src="../../../..//CommonFiles/Buttons/BTN_TogLessonMenuX.jpg" onclick='executeClick("../../../../TextX/LessonsX/GeneticsX/PracticePedigreeRecognitionX/PracticePedigreeRecognitionX.html")'><span class="sr-only">Hide Explanatory Text</span></a>
+                <a><img class="btnHeader" id="btnQuestions" src="../../../..//CommonFiles/Buttons/BTN_Questions.jpg" onclick='executeClick("QuestionsPracticePedigreeRecognitionT.html")'><span class="sr-only">Practice Questions</span></a>
+                <a><img class="btnHeader" id="btnFeedback" src="../../../..//CommonFiles/Buttons/BTN_Feedback.jpg" onclick='executeClick("FeedbackPracticePedigreeRecognitionT.html")'><span class="sr-only">Provide Feedback</span></a>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <li><button id="menu1" class="linksLarge"></button></li>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='PracticePedigreeRecognitionT.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <a><img class="btnFooter" id="btnLessonMenu" src="../../../..//CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='PracticePedigreeRecognitionT.html'"><span class="sr-only">Return to Main Menu</span></a>
+                <a><img class="btnFooter" id="btnBack" src="../../../..//CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span></a>
+                <a><img class="btnFooter btnRate" id="btnSlower" src="../../../..//CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')"><span class="sr-only">Slow Down</span></a>
+                <a><img class="btnFooter btnRate" id="btnFaster" src="../../../..//CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')"><span class="sr-only">Speed Up</span></a>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="PracticePedigreeRecognitionT_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../..//CommonFiles/masterUIcontrol.js"></script>
+<script src="PracticePedigreeRecognitionT.js"></script>
+</html>

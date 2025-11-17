@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="ReplicationT" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterMolecularBiology.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../..//CommonFiles/LessonSpecificStylesheets/Replication.css">
+    <title>Replication</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>DNA Replication</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viReplication.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+                <img class="btnHeader" id="btnToCentralMenu" src="../../../..//CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick="self.location.href='../../../CentralMenuT.html'"><span class="sr-only">Return to Main Menu</span>
+                <img class="btnHeader" id="btnTogTextLessonMenuX" src="../../../..//CommonFiles/Buttons/BTN_TogLessonMenuX.jpg" onclick="self.location.href='../../../../TextX/LessonsX/MolecularBiologyX/ReplicationX/ReplicationX.html'"><span class="sr-only">Hide Explanatory Text</span>
+                <img class="btnHeader" id="btnToPopUps" src="../../../../CommonFiles/Buttons/BTN_PopUp.jpg" onclick='executeClick("PopUpsReplicationT.html")'><span class="sr-only">Pop Ups</span>
+                <img class="btnHeader" id="btnExcerpts" src="../../../../CommonFiles/Buttons/BTN_Excerpts.jpg" onclick='executeClick("ExcerptsReplicationT.html")'><span class="sr-only">Excerpts</span>
+                <img class="btnHeader" id="btnQuestions" src="../../../..//CommonFiles/Buttons/BTN_Questions.jpg" onclick="self.location.href='QuestionsReplicationT.html'"><span class="sr-only">Practice Questions</span>
+                <img class="btnHeader" id="btnFeedback" src="../../../..//CommonFiles/Buttons/BTN_Feedback.jpg" onclick="self.location.href='FeedbackReplicationT.html'"><span class="sr-only">Provide Feedback</span>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <br>
+                        <br>
+                        <li><button id="menu1" class="linksLarge">Introductory Concepts</button></li>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <li><button id="menu2" class="linksLarge">The Cell Cycle</button></li>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <li><button id="menu3" class="linksLarge">Characteristics of Replication</button></li>
+                            <li><button id="menu4" class="linksSmall">Requirements</button></li>
+                            <li><button id="menu5" class="linksTiny">DNA Polymerase</button></li>
+                            <li><button id="menu6" class="linksTiny">Mg<sup>+2</sup></button></li>
+                            <li><button id="menu7" class="linksTiny">Template</button></li>
+                            <li><button id="menu8" class="linksTiny">dNTPs</button></li>
+                            <li><button id="menu9" class="linksTiny">Primer</button></li>
+                        <br>
+                            <li><button id="menu10" class="linksSmall">5'-3' Direction</button></li>
+                            <li><button id="menu11" class="linksSmall">Complimentary</button></li>
+                            <li><button id="menu12" class="linksSmall">Proofreading</button></li>
+                            <li><button id="menu13" class="linksSmall">Bidirectional</button></li>
+                            <li><button id="menu14" class="linksSmall">Discontinuous</button></li>
+                            <li><button id="menu15" class="linksSmall">Semiconservative</button></li>
+                    </ul>
+                </div>
+                <div class="group2">
+                    <ul class="menuLists">
+                        <li><button id="menu16" class="linksLarge">Overview</button></li>
+                            <li><button id="menu17" class="linksSmall">Initiation of Replication</button></li>
+                            <li><button id="menu18" class="linksTiny">ori</button></li>
+                            <li><button id="menu19" class="linksTiny">Helicase</button></li>
+                            <li><button id="menu20" class="linksTiny">Single Stranded Binding Proteins</button></li>
+                            <li><button id="menu21" class="linksTiny">Replication Bubble</button></li>
+                        <br>
+                        <br>
+                            <li><button id="menu22" class="linksSmall">Replisome</button></li>
+                            <li><button id="menu23" class="linksTiny">Leading Strand, DNA Polymerase &epsilon;</button></li>
+                            <li><button id="menu24" class="linksTiny">Lagging Strand Replication</button></li>
+                            <li><button id="menu25" class="linksTiny">Primase</button></li>
+                            <li><button id="menu26" class="linksTiny">Sliding Clamp</button></li>
+                            <li><button id="menu27" class="linksTiny">Clamp Loader</button></li>
+                            <li><button id="menu28" class="linksTiny">DNA Polymerase &delta;</button></li>
+                            <li><button id="menu29" class="linksTiny">Okazaki Fragments</button></li>
+                            <li><button id="menu30" class="linksTiny">Replication</button></li>
+                            <li><button id="menu31" class="linksTiny">Strands</button></li>
+                            <li><button id="menu32" class="linksTiny">Topoisomerase</button></li>
+                        <br>
+                        <br>
+                            <li><button id="menu33" class="linksSmall">Primer Removal</button></li>
+                            <li><button id="menu34" class="linksTiny">RNAase</button></li>
+                            <li><button id="menu35" class="linksTiny">DNA Polymerase &beta;</button></li>
+                            <li><button id="menu36" class="linksTiny">DNA Ligase</button></li>
+                        <br>
+                        <br>
+                        <li><button id="menu37" class="linksSmall">Telomerase</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footerLinks">
+                <a href="CitationsReplicationT.html">Citations</a>
+            </div>
+        </div>
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='ReplicationT.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <img class="btnFooter" id="btnLessonMenu" src="../../../..//CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='ReplicationT.html'">
+                <img class="btnFooter" id="btnBack" src="../../../..//CommonFiles/Buttons/BTN_Back.jpg">
+                <img class="btnFooter btnRate" id="btnSlower" src="../../../..//CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')">
+                <img class="btnFooter btnRate" id="btnFaster" src="../../../..//CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')">
+                <img class="btnFooter btnSide" id="btnSideBang" src="Bang/BTN_Bang.jpg">
+            </div>
+        </div>
+
+        <!-- Side Lesson -->
+        <div class="side" id="sideBang">
+            <div class="sideAnimation" id="sideAnimationBang" onclick="nextSlideSide()">
+                <video class="video" id="sideVideoBang" muted autoplay nodownload>
+                    <source id="sideSrcBang" src='Bang/BangT.mp4' type="video/mp4">
+                    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <img class="btnFooter btnSideBack" id="btnSideBackBang" src="../../../..//CommonFiles/Buttons/BTN_Back.jpg">
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="ReplicationT_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../..//CommonFiles/masterUIcontrol.js"></script>
+<script src="ReplicationT.js"></script>
+<script src="Bang/BangT_src_array.js"></script>
+</html>

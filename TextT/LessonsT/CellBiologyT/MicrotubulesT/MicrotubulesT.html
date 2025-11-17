@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="MicrotubulesT" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterCellBiology.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/MasterLessons.css">
+    <link rel="stylesheet" href="../../../../CommonFiles/LessonSpecificStylesheets/Microtubules.css">
+    <title>Microtubules</title>
+</head>
+
+<body>
+    <div class="entireLesson">            <!-- Lesson Container, Menu and Animation -->
+        <div class="lessonMenuPage" id="lessonMenuPage" onclick="nextSlide()">    <!-- Container for Menu & Footer -->
+
+            <header>
+                <h1>Microtubules</h1>
+            </header>
+            <div class="viScript">
+                <a onclick='executeClickNewWindow("viMicrotubules.html")'>Script for the Visually Impaired</a>
+            </div>
+
+            <!-- Header Button Bank -->
+            <div class="headBank">
+                <img class="btnHeader" id="btnToCentralMenu" src="../../../../CommonFiles/Buttons/BTN_ToCentralMenu.jpg" onclick='executeClick("../../../CentralMenuT.html")'><span class="sr-only">Return to Main Menu</span>
+                <img class="btnHeader" id="btnTogTextLessonMenuX" src="../../../../CommonFiles/Buttons/BTN_TogLessonMenuX.jpg" onclick='executeClick("../../../../TextX/LessonsX/CellBiologyX/MicrotubulesX/MicrotubulesX.html")'><span class="sr-only">Hide Explanatory Text</span>
+                <img class="btnHeader" id="btnToPopUps" src="../../../../CommonFiles/Buttons/BTN_PopUp.jpg" onclick='executeClick("PopUpsMicrotubulesX.html")'><span class="sr-only">PopUps</span>
+                <img class="btnHeader" id="btnExcerpts" src="../../../../CommonFiles/Buttons/BTN_Excerpts.jpg" onclick='executeClick("ExcerptsMicrotubulesT.html")'><span class="sr-only">Excerpts</span>
+                <img class="btnHeader" id="btnQuestions" src="../../../../CommonFiles/Buttons/BTN_Questions.jpg" onclick='executeClick("QuestionsMicrotubulesT.html")'><span class="sr-only">Practice Questions</span>
+                <img class="btnHeader" id="btnFeedback" src="../../../../CommonFiles/Buttons/BTN_Feedback.jpg" onclick='executeClick("FeedbackMicrotubulesT.cfm")'><span class="sr-only">Provide Feedback</span>
+            </div>
+
+            <!-- Lesson Menu -->
+            <div class="lessonMenu">
+                <div class="group1">
+                    <ul class="menuLists">
+                        <li><button id="menu1" class="linksLarge">Microtubule Structure/Assembly</button></li>
+                            <li><button id="menu2" class="linksSmall">γ-TuRC</button></li>
+                            <li><button id="menu3" class="linksSmall">Augmin</button></li>
+                            <li><button id="menu4" class="linksSmall">Centrosome</button></li>
+                            <li><button id="menu5" class="linksSmall">Diverse MT Distributions</button></li>
+                            <li><button id="menu6" class="linksSmall">Dynamic Instability</button></li>
+                            <li><button id="menu7" class="linksSmall">Guanine Nucleotide Kinetics</button></li>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <li><button id="menu8" class="linksLarge">Microtubule Associated Proteins</button></li>
+                            <li><button id="menu9" class="linksSmall">XMAP215</button></li>
+                            <li><button id="menu10" class="linksSmall">CLASP</button></li>
+                            <li><button id="menu11" class="linksSmall">EB1</button></li>
+                            <li><button id="menu12" class="linksSmall">Stathmin</button></li>
+                            <li><button id="menu13" class="linksSmall">Kinesin-13</button></li>
+                            <li><button id="menu14" class="linksSmall">Tau</button></li>
+                            <li><button id="menu15" class="linksSmall">Katanin</button></li>
+                            <li><button id="menu16" class="linksSmall">CAMSAP</button></li>
+                            <li><button id="menu17" class="linksSmall">MT-Golgi Anchoring</button></li>
+                    </ul>
+                </div>
+                <div class="group2">
+                    <ul class="menuLists">
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <li><button id="menu18" class="linksLarge">MT Motor Proteins</button></li>
+                            <li><button id="menu19" class="linksSmall">Kinesin-1</button></li>
+                            <li><button id="menu20" class="linksSmall">Dynein-1</button></li>
+                            <li><button id="menu21" class="linksSmall">Intracellular Trafficking</button></li>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <br>
+                        <li><button id="menu22" class="linksLarge">Flagella, Cilia</button></li>
+                            <li><button id="menu23" class="linksSmall">Basal Bodies</button></li>
+                            <li><button id="menu24" class="linksSmall">Axoneme</button></li>
+                            <li><button id="menu25" class="linksSmall">Axonemal Dynein</button></li>
+                            <li><button id="menu26" class="linksSmall">Flagella, Cilia Beating</button></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footerLinks" >
+                <a onclick='executeClick("CitationsMicrotubulesT.html")'><span class="sr-only">Citations</span>Citations</a>
+            </div>
+        </div>
+
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId">
+				    <source id="videoSrc" src='MicrotubulesT.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <img class="btnFooter" id="btnLessonMenu" src="../../../../CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='MicrotubulesT.html'"><span class="sr-only">Return to Main Menu</span>
+                <img class="btnFooter" id="btnBack" src="../../../../CommonFiles/Buttons/BTN_Back.jpg"><span class="sr-only">Go back to last scene</span>
+                <img class="btnFooter btnRate" id="btnSlower" src="../../../../CommonFiles/Buttons/BTN_Slow.jpg" onclick="slowDown('videoId')"><span class="sr-only">Slow Down</span>
+                <img class="btnFooter btnRate" id="btnFaster" src="../../../../CommonFiles/Buttons/BTN_Fast.jpg" onclick="speedUp('videoId')"><span class="sr-only">Speed Up</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+<script src="MicrotubulesT_src_array.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../../../../CommonFiles/masterUIcontrol.js"></script>
+<script src="MicrotubulesT.js"></script>
+</html>

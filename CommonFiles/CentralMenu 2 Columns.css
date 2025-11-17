@@ -1,0 +1,198 @@
+body {
+	background-color: black;
+}
+
+.entireCentralMenu {
+	background: url('Images/CentralMenuBackground.jpg');
+    background-repeat: no-repeat;
+	background-size: 100%;
+	width: 100vw;
+	height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
+	max-height: 100vmin;
+	max-width: 137.5vmin; /* (1650/1200) * 100 ... ratio = 1.375*/
+	position: absolute;
+	margin: auto;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	text-align: center;
+    White-space: nowrap; /* Keeps Title on one line */
+}
+
+.centralMenu {
+	display: grid;
+	grid-template-columns: auto auto;
+	grid-gap: 17vmin;
+	justify-content: center;
+}
+
+.centralMenu > div {
+	line-height: 1.5vmin;
+}
+
+/* grid-row-start / grid-column-start / grid-row-end / grid-column-end */
+
+.group1 {
+	grid-area: 1 / 1;
+}
+
+.group2 {
+	grid-area: 1 / 2;
+}
+
+.menuLists {
+	position: relative;
+	padding: 0vmin;
+	list-style-type: none;
+	align-content: center;
+}
+
+h1 {
+	font-family: Arial Rounded MT, san-serif;
+	color: #9BFFFF;
+	background: transparent;
+	border: none;
+	font-weight: bold;
+	font-size: 4.5vmin;
+} 
+
+/* ideally use JS to check for aspect ratio of menuLists? */
+@media (max-aspect-ratio: 1650/1400) {
+	button.linksLarge {
+		font-size: 3.5vmin !important;
+	}
+    
+	button.linksSmall {
+		font-size: 3.5vmin !important;
+	}
+    
+    .btnTogText {
+        padding-top: 18vmin !important;
+    }
+    
+    .centralMenu > div {
+        line-height: 0vmin;
+    }
+}
+
+@media (max-width: 200px) {
+	/* size when things break/overflow */
+	/* not sure who wants to view at <200px though... */
+}
+
+button.linksLarge {
+	font-family: Arial Rounded MT, san-serif;
+	color: #02E8E5;
+	background: transparent;
+	border: none;
+	font-weight: bold;
+	font-size: 2.7vw;
+	font-size: 2.7vh;
+	padding: 0;
+}
+
+button:hover.linksLarge {
+	color: #9DFFFF;
+	cursor: pointer;
+    transform: scale(1.1);
+}
+
+button:active.linksLarge {
+	cursor: pointer;
+    transform: scale(0.98);
+}
+
+button.linksSmall {
+	font-family: Arial Rounded MT, san-serif;
+	color: #02E8E5;
+	background: transparent;
+	border: none;
+	font-weight: bold;
+	font-size: 1.9vw;
+	font-size: 1.9vh;
+	padding: 0;
+}
+
+button:hover.linksSmall {
+	color: #9DFFFF;
+	cursor: pointer;
+    transform: scale(1.1);
+}
+
+button:active.linksSmall {
+	cursor: pointer;
+    transform: scale(0.98);
+}
+
+button:active {
+    outline: none !important;
+}
+
+button:focus {
+    outline: none !important;
+}
+
+.footerLinks {
+	font-family: Arial;
+	font-size: 3vmin;
+	position: absolute;
+	width: 100vw;
+	max-width: 137.5vmin;
+	text-align: center;
+	align-content: center;
+	bottom: 7vmin;
+}
+
+.footerLinks > a:link {
+	color: #babdea;
+    padding-left: 3vmin;
+    padding-right: 2.5vw;
+}
+
+.footerLinks > a:visited {
+	color: #4f58c9;
+}
+
+.footerLinks > a:hover {
+	color: #A137BB;
+}
+
+.footerLinks > a:active {
+	color: #8285DF;
+}
+
+/* https://css-tricks.com/aspect-ratio-boxes/ */
+
+.lessons {
+	width: 100vw;
+	height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
+	max-height: 100vmin;
+	max-width: 137.5vmin; /* (1650/1200) * 100 ... ratio = 1.375*/
+	position: absolute;
+	margin: auto;
+	left: 0;
+	right: 0;
+	top: 0;
+	bottom: 0;
+	background-color: black;
+}
+
+.btnTogText {
+	display: block;
+	padding-top: 21vmin;
+}
+
+.btnToCentralMenuT{
+	width: 8%; 
+	position: relative;
+	z-index: 1;
+    cursor: pointer;
+}
+
+.btnToCentralMenuX{
+	width: 8%; 
+	position: relative;
+	z-index: 1;
+    cursor: pointer;
+}

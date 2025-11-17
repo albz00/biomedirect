@@ -1,0 +1,272 @@
+﻿<!-- 
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="ExcerptNameT" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <title>ExcerptName</title>
+
+    <style>
+        body {
+            background-color: black;
+        }
+
+        .lesson {
+            width: 100vw;
+            height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
+            max-height: 100vh;
+            max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
+            position: absolute;
+            margin: auto;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            background-color: black;
+            display: block;
+            overflow: hidden;
+        }
+
+        .video {
+            text-align: center;
+            align-content: center;
+            z-index: 0;
+            position: absolute;
+            overflow: hidden;
+            height: 98%;
+            top: 2vh;
+            left: -20vmin;
+        }
+
+        .lessonButtons {
+            width: 100%;
+            position: absolute;
+            bottom: 1vmin;
+            z-index: 1;
+        }
+
+        #btnBack {
+            float: left;
+            height: 5.9vh;
+            width: 5.9vh;
+            position: relative; /* Relative to video field */
+        }
+        
+        #btnBack span{
+            font-size: 2vmax;
+        }
+
+        #btnBack:hover span {
+            display: none;
+        }
+
+        #btnBack:hover:before {
+            content:"Back";
+        }
+
+        @media (max-aspect-ratio: 1650/1300) {
+            .video {
+                left: -15vmin !important;
+                top: 0.5vh !important;
+            }
+        }
+
+    </style>
+</head>
+
+<body>
+    <div class="entireLesson">
+        <!-- Lesson -->
+        <div id="lesson" class="lesson">
+            <div class="animation" id="animation" onclick="nextSlide()">
+                <video class="video" id="videoId" muted autoplay nodownload>
+				    <source id="videoSrc" src='ExcerptNameT.mp4' type="video/mp4">
+				    Video tag not supported
+                </video>
+            </div>
+            <div class="lessonButtons">
+                <button class="btnFooter" id="btnBack" onclick="backSlide()"><span>&#x21E6;</span></button>
+            </div>
+        </div>
+    </div>
+</body>
+
+// src_Array,   Replace the following code with Excerpt_srcArray 
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script type="text/javascript">
+    var srcArray = [
+        {
+            "src_start": "",
+            "src_end": "",
+            "stopPoint": null,
+            "menuLink": "Opening",
+            "side": false,
+            "loop": false
+        },
+        {
+            "src_start": 0.0,
+            "src_end": 1.70703125,
+            "stopPoint": 0,
+            "menuLink": null,
+            "side": false,
+            "loop": false
+        },
+        {
+            "src_start": 3.3740319293478263,
+            "src_end": 5.8400135869565215,
+            "stopPoint": 1,
+            "menuLink": null,
+            "side": false,
+            "loop": false
+        },
+    ];
+
+    var currentSlide = 0;
+    const lastSlide = srcArray.length - 1;
+    const firstSlide = 0;
+
+    // Pause all videos upon loading
+    videoId.pause();
+
+    //Setup the page (this is already done in CSS so this is redundant, but doesn't hurt to be extra sure)
+    window.onload = function () {
+        $('#lesson').css('display', 'block');
+    };
+
+    //Avoid picking slides that don't exist
+    function checkSlideNum() {
+        if (currentSlide > lastSlide) {
+            currentSlide = lastSlide;
+            states.lastSlide = true;
+        }
+        if (currentSlide < firstSlide) {
+            currentSlide = firstSlide;
+        }
+        if (currentSlide == lastSlide & states.lastSlide == false) {
+            states.lastSlide = true;
+        }
+        if (currentSlide != lastSlide & states.lastSlide == true) {
+            states.lastSlide = false;
+        }
+    }
+
+    //States
+    var states = {
+        lastSlide: false
+    };
+
+
+    /* Updates video.
+     * When called with play=true or without arguments, it will play the next scene
+     * When called with play=false, it will go to the last frame (src_end) of currentSlide
+    */
+    function updateVideoId(play) {
+        checkSlideNum();
+
+        if (play) {
+            if (srcArray[currentSlide].src_start != null) {
+                videoId.currentTime = srcArray[currentSlide].src_start;
+            }
+            else {
+                console.error("Invalid srcArray/currentSlide/src_start. currentSlide = " + currentSlide);
+            }
+            try {
+                videoId.play(); // Go to FindMe4
+            }
+            catch (err) { console.log(err); }
+        }
+        else {
+            //Go to end of last clip
+            if (srcArray[currentSlide].src_end) {
+                videoId.currentTime = srcArray[currentSlide].src_end;
+            }
+            else {
+                console.error("Invalid srcArray[currentSlide]src_end. currentSlide = " + currentSlide);
+            }
+        }
+    }
+
+    // Listener to pause video when reach specified time and implements looping // FindMe4
+    videoId.addEventListener("timeupdate", function () {
+        if (this.currentTime >= srcArray[currentSlide].src_end) {
+            // if next slide is a loop, then autoplay next slide
+            if (currentSlide + 1 <= lastSlide &&
+                srcArray[currentSlide + 1].loop) {
+                currentSlide++;
+                updateVideoId(true);
+            }
+            // if current slide is a loop, then loop
+            else if (srcArray[currentSlide].loop) {
+                updateVideoId(true);
+            }
+            else {
+                this.pause();
+            }
+        }
+    });
+
+    function nextSlide() {
+        currentSlide++;
+        updateVideoId(true);
+    }
+
+    function backSlide() {
+        if (currentSlide > 1) {
+            if (srcArray[currentSlide].loop) {
+                currentSlide--;
+            }
+            currentSlide--;
+            if (srcArray[currentSlide].loop) {
+                updateVideoId(true);
+            }
+            else {
+                updateVideoId(false);
+            }
+        }
+    }
+
+    document.onkeydown = function (e) {
+        switch (e.keyCode) {
+            case 13:
+                //'Enter' keyCode
+                nextSlide();
+                console.log('Enter');
+                break;
+
+            case 32:
+                //'SpaceBar' keyCode
+                nextSlide();
+                console.log('space keystroke');
+                break;
+
+            case 39:
+                //right arrow
+                nextSlide();
+                console.log('right arrow');
+                break;
+
+            case 34:
+                //'PgDn' keyCode
+                nextSlide();
+                console.log('PgDn');
+                break;
+
+            case 37:
+                //left arrow
+                backSlide();
+                console.log('left arrow');
+                break;
+
+            case 33:
+                //'PgUp' keyCode
+                backSlide();
+                console.log('PgUp');
+                break;
+        }
+    }
+
+</script>
+</html>

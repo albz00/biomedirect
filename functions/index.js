@@ -76,65 +76,50 @@ exports.generateSrcArray = onObjectFinalized(
 
 function detectScenes(videoPath) {
   return new Promise((resolve, reject) => {
-    const times = [];
+    const sceneTimes = [];
     const ff = spawn(ffmpegPath, [
       "-i", videoPath,
-      "-filter:v", "select='gt(scene,0.3)',showinfo",
+      "-vf", "select='gt(scene,0.3)',showinfo",
       "-f", "null", "-",
     ]);
 
     ff.stderr.on("data", (data) => {
-      const text = data.toString();
-      const match = text.match(/pts_time:(\d+\.\d+)/);
+      const line = data.toString();
+      const match = line.match(/pts_time:(\d+\.\d+)/);
       if (match) {
-        times.push(parseFloat(match[1]));
+        sceneTimes.push(parseFloat(match[1]));
       }
     });
 
     ff.on("close", (code) => {
-      // Sort and remove duplicates
-      const uniqueTimes = [...new Set(times)].sort((a, b) => a - b);
-      // Even if ffmpeg exits with non-zero, if we got some times, use them
-      if (uniqueTimes.length > 0 || code === 0) {
-        resolve(uniqueTimes);
-      } else {
-        reject(new Error("ffmpeg scene detect failed"));
-      }
-    });
-
-    ff.on("error", (err) => {
-      reject(new Error(`ffmpeg spawn failed: ${err.message}`));
+      if (code === 0) resolve(sceneTimes);
+      else reject(new Error("ffmpeg scene detection failed"));
     });
   });
 }
 
 function getDuration(videoPath) {
   return new Promise((resolve, reject) => {
+    let duration = null;
     const ff = spawn(ffmpegPath, [
       "-i", videoPath,
       "-f", "null", "-",
     ]);
 
-    let duration = null;
-
     ff.stderr.on("data", (data) => {
       const text = data.toString();
-      const m = text.match(/Duration: (\d+):(\d+):(\d+\.\d+)/);
-      if (m) {
-        const h = parseInt(m[1], 10);
-        const mnt = parseInt(m[2], 10);
-        const s = parseFloat(m[3]);
-        duration = h * 3600 + mnt * 60 + s;
+      const match = text.match(/Duration: (\d+):(\d+):(\d+\.\d+)/);
+      if (match) {
+        const h = parseInt(match[1]);
+        const m = parseInt(match[2]);
+        const s = parseFloat(match[3]);
+        duration = h * 3600 + m * 60 + s;
       }
     });
 
     ff.on("close", () => {
       if (duration != null) resolve(duration);
-      else reject(new Error("could not read duration"));
-    });
-
-    ff.on("error", (err) => {
-      reject(new Error(`ffmpeg spawn failed: ${err.message}`));
+      else reject(new Error("Could not read duration"));
     });
   });
 }

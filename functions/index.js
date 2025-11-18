@@ -36,8 +36,16 @@ exports.generateSrcArray = onObjectFinalized(async (event) => {
 
     console.log("Scene data detected:", sceneData);
 
+    // Detect yellow screens and filter them out
+    const yellowScreenTimes = await detectYellowScreens(tempFilePath);
+    console.log("Yellow screen times detected:", yellowScreenTimes);
+
+    // Filter out scene changes that occur during yellow screens
+    const filteredSceneData = filterYellowScreens(sceneData, yellowScreenTimes);
+    console.log("Filtered scene data (yellow screens removed):", filteredSceneData);
+
     // Convert to srcArray format
-    const srcArray = buildSrcArray(sceneData);
+    const srcArray = buildSrcArray(filteredSceneData);
 
     console.log("Final srcArray:", srcArray);
 
@@ -92,6 +100,78 @@ function detectScenes(videoPath) {
                 resolve([]);
             })
             .run();
+    });
+}
+
+// Detect yellow screens in video
+function detectYellowScreens(videoPath) {
+    return new Promise((resolve, reject) => {
+        let yellowTimes = [];
+        // Detect frames with high yellow content
+        // Yellow in RGB: high R and G (>=180), low B (<=120)
+        // We sample the center area of frames (where yellow screens are typically uniform)
+        // and check if those pixels are yellow
+        
+        // Method: Crop center 50% of frame, scale down for efficiency, then check for yellow pixels
+        // This detects frames where the center area is predominantly yellow
+        ffmpeg(videoPath)
+            .outputOptions([
+                "-vf", "crop=iw*0.5:ih*0.5:iw*0.25:ih*0.25,scale=100:100,select='gte(r,180)*gte(g,180)*lte(b,120)',showinfo",
+                "-vsync", "0",
+                "-f", "null",
+            ])
+            .on("stderr", function(line) {
+                // Parse showinfo output for frame timestamps
+                const ptsTimeMatch = line.match(/pts_time:([\d.]+)/);
+                if (ptsTimeMatch) {
+                    const time = parseFloat(ptsTimeMatch[1]);
+                    // Group yellow frames into time ranges (frames within 0.5s are considered same yellow screen)
+                    if (yellowTimes.length === 0 || 
+                        Math.abs(yellowTimes[yellowTimes.length - 1].end - time) > 0.5) {
+                        yellowTimes.push({ start: time, end: time });
+                    } else {
+                        yellowTimes[yellowTimes.length - 1].end = time;
+                    }
+                }
+            })
+            .on("end", function() {
+                // Merge overlapping or close yellow screen periods
+                const merged = [];
+                for (let i = 0; i < yellowTimes.length; i++) {
+                    if (merged.length === 0 || yellowTimes[i].start - merged[merged.length - 1].end > 1.0) {
+                        merged.push({ ...yellowTimes[i] });
+                    } else {
+                        merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, yellowTimes[i].end);
+                    }
+                }
+                console.log(`Detected ${merged.length} yellow screen periods`);
+                resolve(merged);
+            })
+            .on("error", function(err) {
+                console.error("FFmpeg yellow screen detection error:", err);
+                // If detection fails, return empty array (no yellow screens detected)
+                resolve([]);
+            })
+            .run();
+    });
+}
+
+// Filter out scene changes that occur during yellow screens
+function filterYellowScreens(sceneTimes, yellowScreenRanges) {
+    if (yellowScreenRanges.length === 0) {
+        return sceneTimes;
+    }
+
+    return sceneTimes.filter(sceneTime => {
+        // Check if this scene change occurs during a yellow screen period
+        for (const yellowRange of yellowScreenRanges) {
+            // Include a small buffer (0.2s) around yellow screens
+            if (sceneTime >= yellowRange.start - 0.2 && sceneTime <= yellowRange.end + 0.2) {
+                console.log(`Filtering out scene change at ${sceneTime}s (yellow screen: ${yellowRange.start}-${yellowRange.end}s)`);
+                return false;
+            }
+        }
+        return true;
     });
 }
 

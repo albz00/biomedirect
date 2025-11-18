@@ -1,137 +1,115 @@
 const {onObjectFinalized} = require("firebase-functions/v2/storage");
 const admin = require("firebase-admin");
-const {Storage} = require("@google-cloud/storage");
-const ffmpegPath = require("ffmpeg-static");
-const {spawn} = require("child_process");
+const { Storage } = require("@google-cloud/storage");
 const os = require("os");
 const path = require("path");
 const fs = require("fs");
+const ffmpegPath = require("ffmpeg-static");
+const { spawn } = require("child_process");
 
 admin.initializeApp();
 
-const db = admin.firestore();
 const storage = new Storage();
+const db = admin.firestore();
 
-exports.generateSrcArray = onObjectFinalized(
-  {
-    memory: "1GB",
-    timeoutSeconds: 120,
-    disk: "2GB",
-  },
-  async (event) => {
-    const object = event.data;
-    const filePath = object.name || "";
-    const bucketName = object.bucket;
+exports.generateSrcArray = onObjectFinalized(async (event) => {
+  const object = event.data;
+  const filePath = object.name;
+  const bucketName = object.bucket;
 
-    // Only react to MP4s in the videos/ folder
-    if (!filePath.startsWith("videos/") || !filePath.endsWith(".mp4")) {
-      console.log("Skipping non-video upload:", filePath);
-      return;
-    }
+  if (!filePath.startsWith("videos/") || !filePath.endsWith(".mp4")) {
+    console.log("Skipping non-video file:", filePath);
+    return;
+  }
 
-    const lessonId = path.basename(filePath, ".mp4"); // e.g. cytoskeleton_introduction_t
-    console.log(`Processing video for lesson: ${lessonId}`);
+  const lessonId = path.basename(filePath, ".mp4");
 
-    const bucket = storage.bucket(bucketName);
-    const tempFilePath = path.join(os.tmpdir(), path.basename(filePath));
+  const bucket = storage.bucket(bucketName);
+  const tmpFile = path.join(os.tmpdir(), path.basename(filePath));
 
-    try {
-      // 1) Download video to /tmp
-      console.log(`Downloading ${filePath} to ${tempFilePath}`);
-      await bucket.file(filePath).download({destination: tempFilePath});
+  console.log("Downloading video to:", tmpFile);
+  await bucket.file(filePath).download({ destination: tmpFile });
 
-      // 2) Get scene change timestamps
-      console.log("Detecting scenes...");
-      const sceneTimes = await detectScenes(tempFilePath);
-      console.log(`Detected ${sceneTimes.length} scene changes:`, sceneTimes);
+  console.log("Running scene detection...");
+  const scenes = await detectScenes(tmpFile);
+  console.log("Detected scenes:", scenes);
 
-      // 3) Get total duration
-      console.log("Getting video duration...");
-      const duration = await getDuration(tempFilePath);
-      console.log(`Video duration: ${duration}s`);
+  console.log("Getting duration...");
+  const duration = await getDuration(tmpFile);
+  console.log("Duration:", duration);
 
-      // 4) Build srcArray from scene times
-      const srcArray = buildSrcArray(sceneTimes, duration);
-      console.log(`Generated srcArray with ${srcArray.length} segments`);
+  console.log("Building srcArray...");
+  const srcArray = buildSrcArray(scenes, duration);
 
-      // 5) Write into Firestore
-      await db.collection("lessons").doc(lessonId).set(
-        {srcArray},
-        {merge: true}
-      );
-      console.log(`Saved srcArray to Firestore for ${lessonId}`);
+  console.log("Writing srcArray to Firestore...");
+  await db.collection("lessons").doc(lessonId).set(
+    { srcArray },
+    { merge: true }
+  );
 
-      // 6) Clean up temp file
-      fs.unlinkSync(tempFilePath);
-      console.log("Cleanup complete");
-    } catch (error) {
-      console.error(`Error processing ${lessonId}:`, error);
-      // Clean up temp file even on error
-      if (fs.existsSync(tempFilePath)) {
-        fs.unlinkSync(tempFilePath);
-      }
-      throw error;
-    }
-  });
+  console.log("Cleaning up temp file...");
+  fs.unlinkSync(tmpFile);
 
-function detectScenes(videoPath) {
+  console.log("Done!");
+});
+
+function detectScenes(video) {
   return new Promise((resolve, reject) => {
-    const sceneTimes = [];
-    const ff = spawn(ffmpegPath, [
-      "-i", videoPath,
-      "-vf", "select='gt(scene,0.3)',showinfo",
-      "-f", "null", "-",
+    const times = [];
+
+    const proc = spawn(ffmpegPath, [
+      "-i", video,
+      "-filter:v", "select='gt(scene,0.3)',showinfo",
+      "-f", "null", "-"
     ]);
 
-    ff.stderr.on("data", (data) => {
-      const line = data.toString();
-      const match = line.match(/pts_time:(\d+\.\d+)/);
-      if (match) {
-        sceneTimes.push(parseFloat(match[1]));
-      }
+    proc.stderr.on("data", (data) => {
+      const text = data.toString();
+      const match = text.match(/pts_time:(\d+\.\d+)/);
+      if (match) times.push(parseFloat(match[1]));
     });
 
-    ff.on("close", (code) => {
-      if (code === 0) resolve(sceneTimes);
-      else reject(new Error("ffmpeg scene detection failed"));
+    proc.on("close", (code) => {
+      if (code === 0) resolve(times);
+      else reject(new Error("Scene detection failed"));
     });
   });
 }
 
-function getDuration(videoPath) {
+function getDuration(video) {
   return new Promise((resolve, reject) => {
     let duration = null;
-    const ff = spawn(ffmpegPath, [
-      "-i", videoPath,
-      "-f", "null", "-",
+
+    const proc = spawn(ffmpegPath, [
+      "-i", video,
+      "-f", "null", "-"
     ]);
 
-    ff.stderr.on("data", (data) => {
+    proc.stderr.on("data", (data) => {
       const text = data.toString();
       const match = text.match(/Duration: (\d+):(\d+):(\d+\.\d+)/);
       if (match) {
         const h = parseInt(match[1]);
         const m = parseInt(match[2]);
         const s = parseFloat(match[3]);
-        duration = h * 3600 + m * 60 + s;
+        duration = h*3600 + m*60 + s;
       }
     });
 
-    ff.on("close", () => {
-      if (duration != null) resolve(duration);
-      else reject(new Error("Could not read duration"));
+    proc.on("close", () => {
+      if (duration == null) reject(new Error("Unable to read duration"));
+      else resolve(duration);
     });
   });
 }
 
-// Turn scene boundaries into srcArray entries
-function buildSrcArray(sceneTimes, duration) {
-  const boundaries = [0, ...sceneTimes, duration];
+function buildSrcArray(scenes, duration) {
+  const boundaries = [0, ...scenes, duration];
 
-  const srcArray = [];
+  const arr = [];
+  let freeze = 0;
 
-  // Optional: first element "opening"
-  srcArray.push({
+  arr.push({
     src_start: null,
     src_end: null,
     freezeFrame: null,
@@ -140,30 +118,21 @@ function buildSrcArray(sceneTimes, duration) {
     loop: false,
   });
 
-  let freezeFrame = 0;
-
   for (let i = 0; i < boundaries.length - 1; i++) {
     const start = boundaries[i];
     const end = boundaries[i + 1];
-    const length = end - start;
 
-    // Heuristic: skip super-short segments (likely yellow flashes)
-    if (length < 0.4) continue;
+    if (end - start < 0.4) continue; // skip yellow flashes
 
-    srcArray.push({
-      src_start: round(start),
-      src_end: round(end),
-      freezeFrame: freezeFrame++,
-      menuLink: "",        // we can fill this in later / via CMS
+    arr.push({
+      src_start: Math.round(start * 100) / 100,
+      src_end: Math.round(end * 100) / 100,
+      freezeFrame: freeze++,
+      menuLink: "",
       side: false,
       loop: false,
     });
   }
 
-  return srcArray;
+  return arr;
 }
-
-function round(val) {
-  return Math.round(val * 100) / 100;
-}
-

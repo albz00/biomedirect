@@ -9,6 +9,10 @@
     <link rel="stylesheet" href="../../../../CommonFiles/MasterLessons.css">
     <link rel="stylesheet" href="../../../../CommonFiles/LessonSpecificStylesheets/Mutation.css">
     <title>Mutation</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
 </head>
 
 <body>
@@ -88,7 +92,6 @@
         <div id="lesson" class="lesson">
             <div class="animation" id="animation" onclick="nextSlide()">
                 <video class="video" id="videoId">
-				    <source id="videoSrc" src='MutationT.mp4' type="video/mp4">
 				    Video tag not supported
                 </video>
             </div>
@@ -102,8 +105,60 @@
     </div>
 </body>
 
-<script src="MutationT_src_array.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-<script src="../../../../CommonFiles/masterUIcontrol.js"></script>
-<script src="MutationT.js"></script>
+<script>
+    // Initialize Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyB0KbGW-4znfF19ikrUahdCyd_bEungkH4",
+        authDomain: "biome-865cc.firebaseapp.com",
+        projectId: "biome-865cc",
+        storageBucket: "biome-865cc.firebasestorage.app",
+        messagingSenderId: "952652458408",
+        appId: "1:952652458408:web:23e7f0689e9cf973be959d"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Load srcArray from Firestore
+    async function loadSrcArray(lessonId) {
+        const doc = await db.collection("lessons").doc(lessonId).get();
+        if (!doc.exists) {
+            console.error("Lesson not found:", lessonId);
+            return [];
+        }
+        return doc.data().srcArray;
+    }
+
+    // Load video URL from Firebase Storage
+    async function loadVideoUrl(lessonId) {
+        const storageRef = firebase.storage().ref();
+        const fileRef = storageRef.child(`videos/${lessonId}.mp4`);
+        return fileRef.getDownloadURL();
+    }
+
+    // Load masterUIcontrol.js first
+    const masterUIScript = document.createElement('script');
+    masterUIScript.src = '../../../../CommonFiles/masterUIcontrol.js';
+    document.body.appendChild(masterUIScript);
+    
+    masterUIScript.onload = function() {
+        // Load srcArray from Firestore and initialize player
+        (async () => {
+            const lessonId = "mutation_t";
+
+            const srcArray = await loadSrcArray(lessonId);
+            const videoUrl = await loadVideoUrl(lessonId);
+
+            console.log("Loaded timing array:", srcArray);
+            console.log("Loaded video URL:", videoUrl);
+
+            initializePlayer(videoUrl, srcArray);
+
+            // Load lesson-specific script
+            const lessonScript = document.createElement('script');
+            lessonScript.src = 'MutationT.js';
+            document.body.appendChild(lessonScript);
+        })();
+    };
+</script>
 </html>

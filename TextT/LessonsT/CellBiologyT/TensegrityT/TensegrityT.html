@@ -53,10 +53,12 @@ html<!DOCTYPE html>
         <!-- Lesson -->
         <div id="lesson" class="lesson">
             <div class="animation" id="animation" onclick="nextSlide()">
-                <video class="video" id="videoId">
-				    <source id="videoSrc" src='TensegrityT.mp4' type="video/mp4">
-				    Video tag not supported
-                </video>
+                <video id="videoId" controls></video>
+
+<script type="module">
+    import { loadLesson } from "../../js/playerLoader.js";
+    loadLesson();
+</script>
             </div>
             <div class="lessonButtons">
                 <img class="btnFooter" id="btnLessonMenu" src="../../../../CommonFiles/Buttons/BTN_LessonMenu.jpg" onclick="self.location.href='TensegrityT.html'"><span class="sr-only">Return to Main Menu</span>
@@ -68,7 +70,6 @@ html<!DOCTYPE html>
     </div>
 </body>
 
-<script src="TensegrityT_src_array.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script src="../../../../CommonFiles/masterUIcontrol.js"></script>
 <script src="TensegrityT.js"></script>

@@ -12,6 +12,7 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const storage = firebase.storage();
 const auth = firebase.auth();
+const functions = firebase.functions();
 
 // State
 let availableVideos = [];
@@ -587,6 +588,7 @@ async function toggleYellowScreen(lessonId) {
     if (!checkbox) return;
     
     const yellowScreen = checkbox.checked;
+    const previousState = !yellowScreen; // Previous state (before toggle)
     
     try {
         // Get videoPath from videoPaths collection
@@ -605,47 +607,67 @@ async function toggleYellowScreen(lessonId) {
         }
         const videoFilename = match[1]; // Video filename without extension
         
-        // Get srcArray from lessons collection using video filename (not lessonId)
+        // Get current srcArray from lessons collection
         const videoDoc = await db.collection('lessons').doc(videoFilename).get();
         if (!videoDoc.exists) {
             throw new Error(`Video document not found: ${videoFilename}`);
         }
         
-        const currentSrcArray = videoDoc.data().srcArray || [];
+        const videoData = videoDoc.data();
+        const currentSrcArray = videoData.srcArray || [];
+        const originalSrcArray = videoData.originalSrcArray || currentSrcArray;
         let updatedSrcArray = currentSrcArray;
         
-        if (!yellowScreen && currentSrcArray.length > 0) {
-            // Remove yellow screen segments (typically the first segment or segments with specific timing)
-            // Filter out segments that might be yellow screen (usually very short or at the start)
-            updatedSrcArray = currentSrcArray.filter((segment, index) => {
-                // Keep segments that are not likely yellow screens
-                // Yellow screens are usually very short (< 1 second) or at the very beginning
-                if (index === 0 && segment.src_end && segment.src_end < 1.0) {
-                    return false; // Remove first very short segment (likely yellow screen)
-                }
-                return true;
-            });
+        if (!yellowScreen) {
+            // User wants to REMOVE yellow screen - need to detect and adjust
+            setStatus('Detecting yellow screen frames...', 'scanning');
+            checkbox.disabled = true;
             
-            // Adjust src_start of remaining segments if we removed the first one
-            if (updatedSrcArray.length > 0 && updatedSrcArray[0].src_start > 0) {
-                // If first segment doesn't start at 0, adjust it
-                const firstSegment = updatedSrcArray[0];
-                if (firstSegment.src_start && firstSegment.src_start > 0) {
-                    // Keep original start, or adjust if needed
+            try {
+                // Call Cloud Function to detect yellow screens and adjust srcArray
+                const detectYellowScreen = functions.httpsCallable('detectYellowScreen');
+                const result = await detectYellowScreen({
+                    videoPath: videoPath,
+                    videoFilename: videoFilename
+                });
+                
+                if (result.data.success) {
+                    // Cloud Function has already updated the srcArray in Firestore
+                    // Get the updated srcArray
+                    const updatedDoc = await db.collection('lessons').doc(videoFilename).get();
+                    updatedSrcArray = updatedDoc.data().srcArray || currentSrcArray;
+                    
+                    setStatus(`Yellow screen removed: ${result.data.yellowRanges.length} ranges detected, ${result.data.adjustedSegments} segments adjusted`, 'success');
+                } else {
+                    throw new Error('Yellow screen detection failed');
                 }
+            } catch (error) {
+                console.error('Error calling yellow screen detection:', error);
+                // Fallback to simple heuristic if Cloud Function fails
+                setStatus('Using fallback method to remove yellow screen...', 'scanning');
+                updatedSrcArray = adjustSrcArraySimple(currentSrcArray);
             }
-        } else if (yellowScreen && currentSrcArray.length > 0) {
-            // Restore original srcArray - we'd need to store it, but for now just use current
-            // In a full implementation, we'd store the original array separately
-            updatedSrcArray = currentSrcArray;
+        } else {
+            // User wants to RESTORE yellow screen - use original srcArray
+            // Restore original srcArray if it exists
+            if (originalSrcArray && originalSrcArray.length > 0) {
+                updatedSrcArray = originalSrcArray;
+                setStatus('Restoring original srcArray with yellow screens...', 'scanning');
+            } else {
+                // No original stored, can't restore
+                setStatus('Original srcArray not found, cannot restore yellow screens', 'error');
+                checkbox.checked = false; // Revert checkbox
+                return;
+            }
         }
         
         // Update the VIDEO's document in lessons collection with modified srcArray
         await db.collection('lessons').doc(videoFilename).set({
-            srcArray: updatedSrcArray
+            srcArray: updatedSrcArray,
+            originalSrcArray: originalSrcArray // Ensure original is stored
         }, { merge: true });
         
-        // Store yellowScreen preference in videoPaths collection (not lessons)
+        // Store yellowScreen preference in videoPaths collection
         await db.collection('videoPaths').doc(lessonId).set({
             yellowScreen: yellowScreen
         }, { merge: true });
@@ -656,7 +678,9 @@ async function toggleYellowScreen(lessonId) {
             lesson.yellowScreen = yellowScreen;
         }
         
-        setStatus(`Yellow screen ${yellowScreen ? 'enabled' : 'removed'} for ${lesson ? lesson.name : lessonId}`, 'success');
+        if (yellowScreen) {
+            setStatus(`Yellow screen restored for ${lesson ? lesson.name : lessonId}`, 'success');
+        }
         
         setTimeout(() => {
             setStatus('Ready');
@@ -664,8 +688,36 @@ async function toggleYellowScreen(lessonId) {
     } catch (error) {
         console.error('Error toggling yellow screen:', error);
         alert('Error updating yellow screen setting: ' + error.message);
-        checkbox.checked = !yellowScreen; // Revert checkbox
+        checkbox.checked = previousState; // Revert checkbox
+    } finally {
+        checkbox.disabled = false;
     }
+}
+
+// Simple fallback method to adjust srcArray (removes very short initial segments)
+function adjustSrcArraySimple(srcArray) {
+    if (!srcArray || srcArray.length === 0) return srcArray;
+    
+    const adjusted = [];
+    
+    for (const segment of srcArray) {
+        // Keep opening segment
+        if (segment.src_start === null || segment.src_end === null) {
+            adjusted.push(segment);
+            continue;
+        }
+        
+        // Remove very short segments at the start (likely yellow screens)
+        const duration = segment.src_end - segment.src_start;
+        if (adjusted.length === 0 && duration < 1.0) {
+            // Skip first very short segment
+            continue;
+        }
+        
+        adjusted.push(segment);
+    }
+    
+    return adjusted;
 }
 
 // Make functions available globally

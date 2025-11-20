@@ -89,19 +89,63 @@ html<!DOCTYPE html>
 
     // Load srcArray from Firestore
     async function loadSrcArray(lessonId) {
-        const doc = await db.collection("lessons").doc(lessonId).get();
-        if (!doc.exists) {
-            console.error("Lesson not found:", lessonId);
+        try {
+            // First, get videoPath from videoPaths collection
+            const videoPathDoc = await db.collection("videoPaths").doc(lessonId).get();
+            let videoPath;
+            
+            if (videoPathDoc.exists && videoPathDoc.data().videoPath) {
+                videoPath = videoPathDoc.data().videoPath;
+            } else {
+                // Fall back to default path
+                videoPath = `videos/${lessonId}.mp4`;
+            }
+            
+            // Extract video filename from videoPath (e.g., "videos/filename.mp4" → "filename")
+            const match = videoPath.match(/videos\/([^\/]+)\.mp4$/);
+            if (!match) {
+                console.error("Invalid video path format:", videoPath);
+                return [];
+            }
+            const videoFilename = match[1]; // Video filename without extension
+            
+            // Get srcArray from lessons collection using video filename (not lessonId)
+            const videoDoc = await db.collection("lessons").doc(videoFilename).get();
+            if (!videoDoc.exists) {
+                console.error("Video document not found:", videoFilename);
+                return [];
+            }
+            
+            return videoDoc.data().srcArray || [];
+        } catch (error) {
+            console.error("Error loading srcArray:", error);
             return [];
         }
-        return doc.data().srcArray;
     }
 
     // Load video URL from Firebase Storage
     async function loadVideoUrl(lessonId) {
-        const storageRef = firebase.storage().ref();
-        const fileRef = storageRef.child(`videos/${lessonId}.mp4`);
-        return fileRef.getDownloadURL();
+        try {
+            // Check videoPaths collection for custom videoPath
+            const videoPathDoc = await db.collection("videoPaths").doc(lessonId).get();
+            let videoPath;
+            
+            if (videoPathDoc.exists && videoPathDoc.data().videoPath) {
+                // Use custom video path from videoPaths collection
+                videoPath = videoPathDoc.data().videoPath;
+            } else {
+                // Fall back to default path
+                videoPath = `videos/${lessonId}.mp4`;
+            }
+            
+            const storageRef = firebase.storage().ref();
+            const fileRef = storageRef.child(videoPath);
+            return await fileRef.getDownloadURL();
+        } catch (error) {
+            console.error('Error loading video URL:', error);
+            // Return null if video doesn't exist, don't break the page
+            return null;
+        }
     }
 
     // Load masterUIcontrol.js first
@@ -120,7 +164,14 @@ html<!DOCTYPE html>
             console.log("Loaded timing array:", srcArray);
             console.log("Loaded video URL:", videoUrl);
 
-            initializePlayer(videoUrl, srcArray);
+            // Always initialize player to set window.srcArray (required by masterUIcontrol.js)
+            if (videoUrl && srcArray && srcArray.length > 0) {
+                initializePlayer(videoUrl, srcArray);
+            } else {
+                console.warn("Video URL or srcArray missing. Video URL:", videoUrl, "srcArray length:", srcArray ? srcArray.length : 0);
+                // Always initialize with at least empty array to prevent "srcArray is not defined" errors
+                initializePlayer(videoUrl || "", srcArray || []);
+            }
 
             // Load lesson-specific script
             const lessonScript = document.createElement('script');

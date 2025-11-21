@@ -7,6 +7,7 @@ const path = require("path");
 const fs = require("fs");
 const ffmpegPath = require("ffmpeg-static");
 const { spawn } = require("child_process");
+const convert = require("color-convert");
 
 admin.initializeApp();
 
@@ -139,14 +140,19 @@ function buildSrcArray(scenes, duration) {
 }
 
 // Cloud Function to detect yellow screen frames and adjust srcArray
-exports.detectYellowScreen = onCall(async (request) => {
+exports.detectYellowScreen = onCall(
+  {
+    memory: "1GiB",
+    timeoutSeconds: 120,
+  },
+  async (request) => {
   const { videoPath, videoFilename } = request.data;
   
   if (!videoPath || !videoFilename) {
     throw new Error("videoPath and videoFilename are required");
   }
 
-  const bucket = storage.bucket();
+  const bucket = admin.storage().bucket();
   const tmpFile = path.join(os.tmpdir(), `yellow_detect_${Date.now()}.mp4`);
 
   try {
@@ -200,117 +206,170 @@ exports.detectYellowScreen = onCall(async (request) => {
   }
 });
 
-// Detect yellow screen frames using ffmpeg
-// Uses frame extraction and color analysis to identify yellow frames
+// Detect yellow screen frames using raw RGB frame data and LAB color space
+// Avoids all FFmpeg color filters - uses raw video output and pixel sampling
+// Returns yellow frame ranges after converting raw detections to contiguous spans
 function detectYellowFrames(video) {
   return new Promise((resolve, reject) => {
     const yellowFrames = [];
-    const tmpDir = os.tmpdir();
-    const framePattern = path.join(tmpDir, `yellow_frame_%03d.png`);
+    let videoWidth = null;
+    let videoHeight = null;
+    let frameRate = 5; // fps=5 from ffmpeg command
+    let frameIndex = 0;
+    let frameBuffer = Buffer.alloc(0);
     
-    // Extract frames at 1 frame per second for analysis
-    const extractProc = spawn(ffmpegPath, [
-      "-i", video,
-      "-vf", "fps=1", // 1 frame per second
-      "-frames:v", "1000", // Limit to 1000 frames max
-      framePattern
-    ]);
+    // Yellow target in LAB color space
+    const yellowLAB = { L: 97, A: -21, B: 94 };
+    const deltaEThreshold = 40; // ΔE distance threshold for yellow detection
+    const sampleStep = 20; // Sample every 20th pixel
+    const yellowPixelThreshold = 0.5; // >50% of sampled pixels must be yellow
 
-    extractProc.on("close", async (code) => {
-      if (code !== 0 && code !== 1) {
-        // Clean up any extracted frames
-        cleanupFrames(tmpDir, "yellow_frame_");
-        reject(new Error("Frame extraction failed"));
-        return;
-      }
+    // First, get video dimensions from FFmpeg
+    getVideoDimensions(video).then(({ width, height }) => {
+      videoWidth = width;
+      videoHeight = height;
+      const frameSize = width * height * 3; // RGB24 = 3 bytes per pixel
 
-      try {
-        // Analyze extracted frames for yellow color
-        const frameFiles = fs.readdirSync(tmpDir)
-          .filter(f => f.startsWith("yellow_frame_") && f.endsWith(".png"))
-          .sort();
+      // Use ffmpeg to output raw RGB frames at 5 fps
+      const proc = spawn(ffmpegPath, [
+        "-i", video,
+        "-vf", "fps=5",
+        "-f", "image2pipe",
+        "-vcodec", "rawvideo",
+        "-pix_fmt", "rgb24",
+        "-"
+      ]);
 
-        for (const frameFile of frameFiles) {
-          const framePath = path.join(tmpDir, frameFile);
-          const frameNum = parseInt(frameFile.match(/\d+/)[0]);
-          const frameTime = frameNum; // 1 frame per second, so time = frame number
-          
-          // Use ffmpeg to get color statistics for this frame
-          const isYellow = await analyzeFrameForYellow(framePath);
-          
-          if (isYellow) {
-            yellowFrames.push(frameTime);
+      proc.stdout.on("data", (data) => {
+        // Accumulate frame data
+        frameBuffer = Buffer.concat([frameBuffer, data]);
+
+        // Process complete frames
+        while (frameBuffer.length >= frameSize) {
+          const frameData = frameBuffer.slice(0, frameSize);
+          frameBuffer = frameBuffer.slice(frameSize);
+
+          // Sample pixels and check for yellow
+          const yellowPixelCount = sampleFrameForYellow(
+            frameData,
+            videoWidth,
+            videoHeight,
+            sampleStep,
+            yellowLAB,
+            deltaEThreshold
+          );
+
+          const totalSamples = Math.floor(videoWidth / sampleStep) * Math.floor(videoHeight / sampleStep);
+          const yellowRatio = yellowPixelCount / totalSamples;
+
+          if (yellowRatio > yellowPixelThreshold) {
+            const time = frameIndex / frameRate;
+            yellowFrames.push({ frame: frameIndex, time });
           }
+
+          frameIndex++;
+        }
+      });
+
+      proc.stderr.on("data", (data) => {
+        // FFmpeg info/errors go to stderr, but we don't need to parse it
+      });
+
+      proc.on("close", (code) => {
+        if (code !== 0 && code !== 1) {
+          reject(new Error(`FFmpeg process failed with code ${code}`));
+          return;
         }
 
-        // Convert frame detections to time ranges
-        const yellowRanges = framesToRanges(yellowFrames);
-        
-        // Clean up extracted frames
-        cleanupFrames(tmpDir, "yellow_frame_");
-        
-        resolve(yellowRanges);
-      } catch (error) {
-        cleanupFrames(tmpDir, "yellow_frame_");
-        reject(error);
-      }
-    });
+        // Convert raw {frame, time} entries to time ranges
+        const uniqueTimes = [...new Set(yellowFrames.map((entry) => entry.time))].sort((a, b) => a - b);
+        console.log("Detected yellow frames:", yellowFrames);
 
-    extractProc.on("error", (error) => {
-      cleanupFrames(tmpDir, "yellow_frame_");
-      reject(error);
-    });
+        const yellowRanges = framesToRanges(uniqueTimes);
+        resolve(yellowRanges);
+      });
+
+      proc.on("error", (error) => {
+        reject(error);
+      });
+    }).catch(reject);
   });
 }
 
-// Analyze a single frame for yellow color dominance
-function analyzeFrameForYellow(framePath) {
+// Get video dimensions from FFmpeg
+function getVideoDimensions(video) {
   return new Promise((resolve, reject) => {
-    // Use ffmpeg to get color statistics
+    let width = null;
+    let height = null;
+
     const proc = spawn(ffmpegPath, [
-      "-i", framePath,
-      "-vf", "signalstats",
+      "-i", video,
       "-f", "null", "-"
     ]);
 
-    let yMax = 0;
-    let uAvg = 0;
-    let vAvg = 0;
-    let found = false;
-
     proc.stderr.on("data", (data) => {
       const text = data.toString();
-      
-      // Extract YUV color statistics
-      const yMatch = text.match(/YMAX:(\d+\.\d+)/);
-      const uMatch = text.match(/UAVG:(\d+\.\d+)/);
-      const vMatch = text.match(/VAVG:(\d+\.\d+)/);
-      
-      if (yMatch && uMatch && vMatch && !found) {
-        yMax = parseFloat(yMatch[1]) / 255; // Normalize 0-255 to 0-1
-        uAvg = parseFloat(uMatch[1]) / 255;
-        vAvg = parseFloat(vMatch[1]) / 255;
-        found = true;
+      // Look for video stream info: "Stream #0:0 ... Video: ... 1484x1080"
+      const match = text.match(/(\d+)x(\d+)/);
+      if (match && !width) {
+        width = parseInt(match[1], 10);
+        height = parseInt(match[2], 10);
       }
     });
 
     proc.on("close", () => {
-      if (!found) {
-        resolve(false);
-        return;
+      if (width && height) {
+        resolve({ width, height });
+      } else {
+        reject(new Error("Could not determine video dimensions"));
       }
-
-      // Yellow detection criteria:
-      // Yellow in YUV color space:
-      // - High brightness: Y > 0.6 (bright yellow)
-      // - Low-medium blue: U < 0.5 (typically 0.1-0.3 for yellow)
-      // - High red: V > 0.4 (typically 0.5-0.7 for yellow)
-      const isYellow = yMax > 0.6 && uAvg < 0.5 && vAvg > 0.4;
-      resolve(isYellow);
     });
 
     proc.on("error", reject);
   });
+}
+
+// Sample frame pixels and count yellow pixels using LAB color space
+function sampleFrameForYellow(frameData, width, height, sampleStep, yellowLAB, deltaEThreshold) {
+  let yellowCount = 0;
+  let totalSamples = 0;
+
+  // Sample every Nth pixel horizontally and vertically
+  for (let y = 0; y < height; y += sampleStep) {
+    for (let x = 0; x < width; x += sampleStep) {
+      // Calculate pixel offset in buffer (RGB24 format)
+      const offset = (y * width + x) * 3;
+      
+      if (offset + 2 < frameData.length) {
+        // Read RGB values
+        const R = frameData[offset];
+        const G = frameData[offset + 1];
+        const B = frameData[offset + 2];
+
+        // Convert RGB to LAB
+        const pixelLAB = convert.rgb.lab([R, G, B]);
+
+        // Calculate ΔE distance (CIE76)
+        const deltaE = calculateDeltaE(pixelLAB, yellowLAB);
+
+        if (deltaE < deltaEThreshold) {
+          yellowCount++;
+        }
+        totalSamples++;
+      }
+    }
+  }
+
+  return yellowCount;
+}
+
+// Calculate ΔE (CIE76) color distance between two LAB colors
+// lab1 is array [L, A, B] from color-convert, lab2 is object {L, A, B}
+function calculateDeltaE(lab1, lab2) {
+  const dL = lab1[0] - lab2.L;
+  const dA = lab1[1] - lab2.A;
+  const dB = lab1[2] - lab2.B;
+  return Math.sqrt(dL * dL + dA * dA + dB * dB);
 }
 
 // Convert frame detections to time ranges
@@ -345,18 +404,6 @@ function framesToRanges(yellowFrames) {
   });
   
   return mergeYellowRanges(ranges);
-}
-
-// Clean up extracted frame files
-function cleanupFrames(tmpDir, prefix) {
-  try {
-    const files = fs.readdirSync(tmpDir).filter(f => f.startsWith(prefix));
-    for (const file of files) {
-      fs.unlinkSync(path.join(tmpDir, file));
-    }
-  } catch (error) {
-    console.error("Error cleaning up frames:", error);
-  }
 }
 
 // Merge yellow ranges that are close together (within 0.5 seconds)

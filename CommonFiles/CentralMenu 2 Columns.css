@@ -25,6 +25,12 @@ body {
 	grid-template-columns: auto auto;
 	grid-gap: 17vmin;
 	justify-content: center;
+	max-height: min(calc(72.72vw - 30vmin), calc(100vmin - 30vmin)); /* Account for header and footer space */
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 1vmin 2vmin 5vmin 2vmin; /* Extra bottom padding to prevent footer overlap */
+	scrollbar-width: thin;
+	scrollbar-color: #02E8E5 rgba(2, 232, 229, 0.1);
 }
 
 .centralMenu > div {
@@ -43,7 +49,7 @@ body {
 
 .menuLists {
 	position: relative;
-	padding: 0vmin;
+	padding: 0vmin 0vmin 2vmin 0vmin; /* Bottom padding for spacing */
 	list-style-type: none;
 	align-content: center;
 }
@@ -196,3 +202,23 @@ button:focus {
 	z-index: 1;
     cursor: pointer;
 }
+
+/* Custom scrollbar styling */
+.centralMenu::-webkit-scrollbar {
+	width: 12px;
+}
+
+.centralMenu::-webkit-scrollbar-track {
+	background: rgba(2, 232, 229, 0.1);
+	border-radius: 6px;
+}
+
+.centralMenu::-webkit-scrollbar-thumb {
+	background: #02E8E5;
+	border-radius: 6px;
+}
+
+.centralMenu::-webkit-scrollbar-thumb:hover {
+	background: #9DFFFF;
+}
+

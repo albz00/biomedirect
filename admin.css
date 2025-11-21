@@ -20,6 +20,33 @@ html {
     overflow: hidden;
 }
 
+/* Allow scrolling on dashboard screen */
+#dashboardScreen {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 100vh;
+    scrollbar-width: thin;
+    scrollbar-color: #02E8E5 rgba(2, 232, 229, 0.1);
+}
+
+#dashboardScreen::-webkit-scrollbar {
+    width: 12px;
+}
+
+#dashboardScreen::-webkit-scrollbar-track {
+    background: rgba(2, 232, 229, 0.1);
+    border-radius: 6px;
+}
+
+#dashboardScreen::-webkit-scrollbar-thumb {
+    background: #02E8E5;
+    border-radius: 6px;
+}
+
+#dashboardScreen::-webkit-scrollbar-thumb:hover {
+    background: #9DFFFF;
+}
+
 .screen {
     min-height: 100vh;
     position: relative;

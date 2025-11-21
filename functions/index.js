@@ -8,13 +8,20 @@ const fs = require("fs");
 const ffmpegPath = require("ffmpeg-static");
 const { spawn } = require("child_process");
 const convert = require("color-convert");
+const { createWorker } = require("tesseract.js");
+const Fuse = require("fuse.js");
 
 admin.initializeApp();
 
 const storage = new Storage();
 const db = admin.firestore();
 
-exports.generateSrcArray = onObjectFinalized(async (event) => {
+exports.generateSrcArray = onObjectFinalized(
+  {
+    memory: "1GiB",
+    timeoutSeconds: 540,
+  },
+  async (event) => {
   const object = event.data;
   const filePath = object.name;
   const bucketName = object.bucket;
@@ -53,7 +60,8 @@ exports.generateSrcArray = onObjectFinalized(async (event) => {
   fs.unlinkSync(tmpFile);
 
   console.log("Done!");
-});
+  }
+);
 
 function detectScenes(video) {
   return new Promise((resolve, reject) => {
@@ -492,3 +500,431 @@ function adjustSrcArrayForYellowScreen(srcArray, yellowRanges) {
 
   return adjusted;
 }
+
+// Detect video titles using OCR
+// Extracts frames at regular intervals and uses OCR to detect text
+// Returns array of { timestamp, text, confidence } objects
+async function detectVideoTitles(video, sampleInterval = 0.5) {
+  const detectedTitles = [];
+  const tmpDir = path.join(os.tmpdir(), `title_detect_${Date.now()}`);
+  fs.mkdirSync(tmpDir, { recursive: true });
+
+  try {
+    // Get video duration first
+    const duration = await getDuration(video);
+    console.log(`Video duration: ${duration} seconds`);
+
+    // Extract frames at regular intervals
+    const framePattern = path.join(tmpDir, "frame_%06d.png");
+    const frameRate = 1 / sampleInterval; // frames per second
+
+    await new Promise((resolve, reject) => {
+      const proc = spawn(ffmpegPath, [
+        "-i", video,
+        "-vf", `fps=${frameRate}`,
+        "-frames:v", Math.ceil(duration * frameRate),
+        framePattern
+      ]);
+
+      proc.on("close", (code) => {
+        if (code === 0 || code === 1) resolve(); // 1 is sometimes OK
+        else reject(new Error(`FFmpeg frame extraction failed with code ${code}`));
+      });
+
+      proc.on("error", reject);
+    });
+
+    // Get list of extracted frames
+    const frameFiles = fs.readdirSync(tmpDir)
+      .filter(f => f.startsWith("frame_") && f.endsWith(".png"))
+      .sort();
+
+    console.log(`Extracted ${frameFiles.length} frames for OCR`);
+
+    // Initialize Tesseract worker
+    const worker = await createWorker("eng");
+
+    // Process each frame with OCR
+    for (let i = 0; i < frameFiles.length; i++) {
+      const frameFile = path.join(tmpDir, frameFiles[i]);
+      const timestamp = i * sampleInterval;
+
+      try {
+        const { data: { text, confidence } } = await worker.recognize(frameFile);
+
+        // Filter for significant text content (title-like)
+        const cleanText = text.trim();
+        if (cleanText.length >= 3 && confidence > 50) {
+          // Check if text looks like a title (not too long, has some structure)
+          const lines = cleanText.split("\n").filter(l => l.trim().length > 0);
+          if (lines.length <= 5 && cleanText.length < 100) {
+            detectedTitles.push({
+              timestamp: Math.round(timestamp * 100) / 100,
+              text: cleanText,
+              confidence: Math.round(confidence)
+            });
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing frame ${frameFile}:`, error);
+      }
+    }
+
+    await worker.terminate();
+
+    // Remove duplicate titles at similar timestamps (within 1 second)
+    const uniqueTitles = [];
+    for (const title of detectedTitles) {
+      const isDuplicate = uniqueTitles.some(existing =>
+        Math.abs(existing.timestamp - title.timestamp) < 1.0 &&
+        existing.text.toLowerCase() === title.text.toLowerCase()
+      );
+      if (!isDuplicate) {
+        uniqueTitles.push(title);
+      }
+    }
+
+    console.log(`Detected ${uniqueTitles.length} unique titles`);
+    return uniqueTitles.sort((a, b) => a.timestamp - b.timestamp);
+
+  } catch (error) {
+    console.error("Error detecting video titles:", error);
+    throw error;
+  } finally {
+    // Clean up temp directory
+    if (fs.existsSync(tmpDir)) {
+      fs.readdirSync(tmpDir).forEach(file => {
+        fs.unlinkSync(path.join(tmpDir, file));
+      });
+      fs.rmdirSync(tmpDir);
+    }
+  }
+}
+
+// Calculate Levenshtein distance for fuzzy string matching
+function levenshteinDistance(str1, str2) {
+  const len1 = str1.length;
+  const len2 = str2.length;
+  const matrix = [];
+
+  for (let i = 0; i <= len1; i++) {
+    matrix[i] = [i];
+  }
+
+  for (let j = 0; j <= len2; j++) {
+    matrix[0][j] = j;
+  }
+
+  for (let i = 1; i <= len1; i++) {
+    for (let j = 1; j <= len2; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        matrix[i][j] = matrix[i - 1][j - 1];
+      } else {
+        matrix[i][j] = Math.min(
+          matrix[i - 1][j] + 1,
+          matrix[i][j - 1] + 1,
+          matrix[i - 1][j - 1] + 1
+        );
+      }
+    }
+  }
+
+  return matrix[len1][len2];
+}
+
+// Calculate similarity score between two strings (0-1, higher is better)
+function stringSimilarity(str1, str2) {
+  const s1 = str1.toLowerCase().trim();
+  const s2 = str2.toLowerCase().trim();
+  
+  if (s1 === s2) return 1.0;
+  
+  const maxLen = Math.max(s1.length, s2.length);
+  if (maxLen === 0) return 1.0;
+  
+  const distance = levenshteinDistance(s1, s2);
+  return 1 - (distance / maxLen);
+}
+
+// Match detected titles to segments
+// Returns object mapping segment indices to title matches
+function matchTitlesToSegments(detectedTitles, segmentLinks, srcArray) {
+  const matches = {
+    // For segments with existing menuLink: { segmentIndex, title, timestamp }
+    refineExisting: [],
+    // For unmapped segments: { segmentIndex, title, timestamp, menuLink }
+    assignNew: []
+  };
+
+  // Get all available segment link labels
+  const availableLabels = segmentLinks.map(link => link.label);
+  
+  // Get segments with existing menuLinks
+  const segmentsWithMenuLinks = srcArray
+    .map((seg, idx) => ({ segment: seg, index: idx }))
+    .filter(({ segment }) => segment.menuLink && segment.menuLink !== "" && segment.menuLink !== "Opening");
+
+  // Get unmapped segments (those without menuLink)
+  const unmappedSegments = srcArray
+    .map((seg, idx) => ({ segment: seg, index: idx }))
+    .filter(({ segment }) => 
+      segment.src_start !== null && 
+      segment.src_end !== null &&
+      (!segment.menuLink || segment.menuLink === "")
+    );
+
+  // Match detected titles to existing menuLinks (for boundary refinement)
+  for (const { segment, index } of segmentsWithMenuLinks) {
+    const menuLinkText = segment.menuLink;
+    let bestMatch = null;
+    let bestScore = 0.5; // Minimum similarity threshold
+
+    for (const detectedTitle of detectedTitles) {
+      // Try exact match first
+      if (detectedTitle.text.toLowerCase().includes(menuLinkText.toLowerCase()) ||
+          menuLinkText.toLowerCase().includes(detectedTitle.text.toLowerCase())) {
+        bestMatch = detectedTitle;
+        bestScore = 1.0;
+        break;
+      }
+
+      // Try fuzzy match
+      const score = stringSimilarity(detectedTitle.text, menuLinkText);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = detectedTitle;
+      }
+    }
+
+    if (bestMatch) {
+      matches.refineExisting.push({
+        segmentIndex: index,
+        title: bestMatch.text,
+        timestamp: bestMatch.timestamp,
+        confidence: bestMatch.confidence,
+        similarity: bestScore
+      });
+    }
+  }
+
+  // Match detected titles to available segment links (for assignment to unmapped segments)
+  // Use Fuse.js for better fuzzy matching
+  const fuse = new Fuse(availableLabels, {
+    threshold: 0.4, // 0 = exact match, 1 = match anything
+    includeScore: true
+  });
+
+  // Match each detected title to available labels
+  const titleToLabelMap = new Map();
+  for (const detectedTitle of detectedTitles) {
+    const results = fuse.search(detectedTitle.text);
+    if (results.length > 0 && results[0].score < 0.6) {
+      // Good match found
+      const matchedLabel = results[0].item;
+      if (!titleToLabelMap.has(matchedLabel)) {
+        titleToLabelMap.set(matchedLabel, detectedTitle);
+      }
+    }
+  }
+
+  // Assign matched titles to unmapped segments chronologically
+  const usedLabels = new Set();
+  for (const { segment, index } of unmappedSegments) {
+    // Find the closest detected title that matches an available label
+    let bestMatch = null;
+    let bestLabel = null;
+    let minDistance = Infinity;
+
+    for (const [label, title] of titleToLabelMap.entries()) {
+      if (usedLabels.has(label)) continue;
+
+      // Check if this title timestamp is close to this segment's start time
+      const distance = Math.abs(title.timestamp - segment.src_start);
+      if (distance < minDistance && distance < 10) { // Within 10 seconds
+        minDistance = distance;
+        bestMatch = title;
+        bestLabel = label;
+      }
+    }
+
+    if (bestMatch && bestLabel) {
+      matches.assignNew.push({
+        segmentIndex: index,
+        title: bestMatch.text,
+        timestamp: bestMatch.timestamp,
+        menuLink: bestLabel,
+        confidence: bestMatch.confidence
+      });
+      usedLabels.add(bestLabel);
+    }
+  }
+
+  return matches;
+}
+
+// Adjust srcArray boundaries and assign missing menuLinks based on title timestamps
+function adjustSrcArrayWithTitleTimestamps(srcArray, titleMatches, segmentLinks) {
+  const adjusted = srcArray.map(seg => ({ ...seg }));
+
+  // First, refine boundaries for segments with existing menuLinks
+  for (const match of titleMatches.refineExisting) {
+    const segment = adjusted[match.segmentIndex];
+    if (segment && segment.src_start !== null) {
+      // Adjust src_start to the detected title timestamp
+      const newStart = match.timestamp;
+      
+      // Ensure we don't overlap with previous segment
+      if (match.segmentIndex > 0) {
+        const prevSegment = adjusted[match.segmentIndex - 1];
+        if (prevSegment.src_end !== null && newStart <= prevSegment.src_end) {
+          // Adjust previous segment's end if needed
+          prevSegment.src_end = Math.round((newStart - 0.01) * 100) / 100;
+        }
+      }
+
+      segment.src_start = Math.round(newStart * 100) / 100;
+      console.log(`Refined segment ${match.segmentIndex} (${segment.menuLink}) to start at ${segment.src_start}s`);
+    }
+  }
+
+  // Second, assign menuLinks to unmapped segments
+  for (const match of titleMatches.assignNew) {
+    const segment = adjusted[match.segmentIndex];
+    if (segment && (!segment.menuLink || segment.menuLink === "")) {
+      segment.menuLink = match.menuLink;
+      
+      // Also adjust src_start to the detected title timestamp
+      if (segment.src_start !== null) {
+        const newStart = match.timestamp;
+        
+        // Ensure we don't overlap with previous segment
+        if (match.segmentIndex > 0) {
+          const prevSegment = adjusted[match.segmentIndex - 1];
+          if (prevSegment.src_end !== null && newStart <= prevSegment.src_end) {
+            prevSegment.src_end = Math.round((newStart - 0.01) * 100) / 100;
+          }
+        }
+
+        segment.src_start = Math.round(newStart * 100) / 100;
+      }
+
+      console.log(`Assigned menuLink "${match.menuLink}" to segment ${match.segmentIndex} at ${segment.src_start}s`);
+    }
+  }
+
+  // Ensure no overlapping segments
+  for (let i = 1; i < adjusted.length; i++) {
+    const prev = adjusted[i - 1];
+    const curr = adjusted[i];
+
+    if (prev.src_end !== null && curr.src_start !== null) {
+      if (curr.src_start <= prev.src_end) {
+        // Adjust current segment start to be just after previous
+        curr.src_start = Math.round((prev.src_end + 0.01) * 100) / 100;
+      }
+    }
+  }
+
+  return adjusted;
+}
+
+// Cloud Function to detect video titles and adjust srcArray timing
+exports.detectVideoTitles = onCall(
+  {
+    memory: "2GiB",
+    timeoutSeconds: 540,
+  },
+  async (request) => {
+    const { videoPath, videoFilename, lessonId, segmentLinks } = request.data;
+
+    if (!videoPath || !videoFilename) {
+      throw new Error("videoPath and videoFilename are required");
+    }
+
+    const bucket = admin.storage().bucket();
+    const tmpFile = path.join(os.tmpdir(), `title_detect_${Date.now()}.mp4`);
+
+    try {
+      console.log("Downloading video for title detection:", videoPath);
+      await bucket.file(videoPath).download({ destination: tmpFile });
+
+      // Get current srcArray from Firestore
+      const videoDoc = await db.collection("lessons").doc(videoFilename).get();
+      if (!videoDoc.exists) {
+        throw new Error(`Video document not found: ${videoFilename}`);
+      }
+
+      const videoData = videoDoc.data();
+      const srcArray = videoData.srcArray || [];
+
+      if (srcArray.length === 0) {
+        throw new Error(`srcArray is empty for video: ${videoFilename}`);
+      }
+
+      console.log("Detecting titles in video...");
+      const detectedTitles = await detectVideoTitles(tmpFile);
+      console.log(`Detected ${detectedTitles.length} titles:`, detectedTitles);
+
+      // Get segment links - use provided segmentLinks or extract from existing menuLinks
+      let segmentLinksToUse = segmentLinks || [];
+      
+      if (segmentLinksToUse.length === 0) {
+        // Fallback: extract from existing menuLinks in srcArray
+        const existingMenuLinks = srcArray
+          .filter(seg => seg.menuLink && seg.menuLink !== "" && seg.menuLink !== "Opening")
+          .map(seg => ({ label: seg.menuLink }));
+        
+        const uniqueLabels = [...new Set(existingMenuLinks.map(l => l.label))];
+        segmentLinksToUse = uniqueLabels.map(label => ({ label }));
+      }
+
+      console.log(`Using ${segmentLinksToUse.length} segment links for matching`);
+
+      // Match detected titles to segments
+      console.log("Matching titles to segments...");
+      const titleMatches = matchTitlesToSegments(detectedTitles, segmentLinksToUse, srcArray);
+      console.log(`Found ${titleMatches.refineExisting.length} matches for existing segments`);
+      console.log(`Found ${titleMatches.assignNew.length} new assignments`);
+
+      // Adjust srcArray with title timestamps
+      const adjustedSrcArray = adjustSrcArrayWithTitleTimestamps(
+        srcArray,
+        titleMatches,
+        segmentLinksToUse
+      );
+
+      // Update Firestore with adjusted srcArray
+      await db.collection("lessons").doc(videoFilename).set({
+        srcArray: adjustedSrcArray,
+        titleDetectionResults: {
+          detectedTitles: detectedTitles,
+          matches: {
+            refined: titleMatches.refineExisting.length,
+            assigned: titleMatches.assignNew.length
+          },
+          timestamp: admin.firestore.FieldValue.serverTimestamp()
+        }
+      }, { merge: true });
+
+      console.log("Title detection and adjustment complete");
+      return {
+        success: true,
+        detectedTitles: detectedTitles.length,
+        refinedSegments: titleMatches.refineExisting.length,
+        assignedMenuLinks: titleMatches.assignNew.length,
+        matches: {
+          refineExisting: titleMatches.refineExisting,
+          assignNew: titleMatches.assignNew
+        }
+      };
+    } catch (error) {
+      console.error("Error detecting video titles:", error);
+      throw new Error(`Title detection failed: ${error.message}`);
+    } finally {
+      // Clean up temp file
+      if (fs.existsSync(tmpFile)) {
+        fs.unlinkSync(tmpFile);
+      }
+    }
+  }
+);

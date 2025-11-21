@@ -17,7 +17,7 @@ const functions = firebase.functions();
 // State
 let availableVideos = [];
 let lessonsData = [];
-let loginScreen, dashboardScreen, loginForm, logoutBtn, scanBtn, refreshVideosBtn, statusText, loginError, lessonsList, videosList;
+let loginScreen, dashboardScreen, loginForm, logoutBtn, scanBtn, refreshVideosBtn, mapSegmentLinksBtn, detectVideoTitlesBtn, statusText, loginError, lessonsList, videosList;
 let searchInput, filterButtons;
 let currentFilter = 'all';
 let searchQuery = '';
@@ -66,6 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
     logoutBtn = document.getElementById('logoutBtn');
     scanBtn = document.getElementById('scanBtn');
     refreshVideosBtn = document.getElementById('refreshVideosBtn');
+    mapSegmentLinksBtn = document.getElementById('mapSegmentLinksBtn');
+    detectVideoTitlesBtn = document.getElementById('detectVideoTitlesBtn');
     statusText = document.getElementById('statusText');
     loginError = document.getElementById('loginError');
     lessonsList = document.getElementById('lessonsList');
@@ -212,6 +214,18 @@ function setupEventListeners() {
     if (refreshVideosBtn) {
         refreshVideosBtn.addEventListener('click', async () => {
             await loadAvailableVideos();
+        });
+    }
+
+    // Map Segment Links
+    if (mapSegmentLinksBtn) {
+        mapSegmentLinksBtn.addEventListener('click', async () => {
+            await mapAllSegmentLinks();
+        });
+    }
+    if (detectVideoTitlesBtn) {
+        detectVideoTitlesBtn.addEventListener('click', async () => {
+            await detectVideoTitlesForAllLessons();
         });
     }
 
@@ -804,6 +818,401 @@ function adjustSrcArraySimple(srcArray) {
     }
     
     return adjusted;
+}
+
+// Extract menu links from lesson HTML file
+async function extractMenuLinksFromHTML(lessonPath) {
+    try {
+        const response = await fetch(lessonPath);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch ${lessonPath}`);
+        }
+        const html = await response.text();
+        
+        // Parse HTML to extract menu buttons
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        
+        const menuLinks = [];
+        const buttons = doc.querySelectorAll('button[id^="menu"]');
+        
+        buttons.forEach(button => {
+            const menuId = button.getAttribute('id');
+            const label = button.textContent.trim();
+            if (menuId && label) {
+                menuLinks.push({ menuId, label });
+            }
+        });
+        
+        // Sort by menu ID to ensure correct order (menu1, menu2, etc.)
+        menuLinks.sort((a, b) => {
+            const numA = parseInt(a.menuId.replace('menu', '')) || 0;
+            const numB = parseInt(b.menuId.replace('menu', '')) || 0;
+            return numA - numB;
+        });
+        
+        return menuLinks;
+    } catch (error) {
+        console.error(`Error extracting menu links from ${lessonPath}:`, error);
+        return [];
+    }
+}
+
+// Extract currentSlide values from lesson JavaScript file
+async function extractCurrentSlideFromJS(lessonPath) {
+    try {
+        // Ensure we're using the T version, not X version
+        // Replace any X with T in the path if needed
+        let normalizedPath = lessonPath;
+        if (normalizedPath.includes('/LessonsX/')) {
+            normalizedPath = normalizedPath.replace('/LessonsX/', '/LessonsT/');
+        }
+        if (normalizedPath.includes('X.html')) {
+            normalizedPath = normalizedPath.replace('X.html', 'T.html');
+        }
+        
+        // Determine JS file path - replace .html with .js
+        let jsPath = normalizedPath.replace(/\.html$/, '.js');
+        
+        // Try to fetch the JS file
+        let response = await fetch(jsPath);
+        if (!response.ok) {
+            // Try alternative path patterns
+            const pathMatch = normalizedPath.match(/(.+T)\.html$/);
+            if (pathMatch) {
+                jsPath = pathMatch[1] + '.js';
+                response = await fetch(jsPath);
+            }
+            if (!response.ok) {
+                throw new Error(`Failed to fetch ${jsPath}`);
+            }
+        }
+        
+        const jsContent = await response.text();
+        
+        // Parse for menu click handlers: $('#menuX').on('click', function () { currentSlide = Y; });
+        const menuToSlideMap = {};
+        
+        // Match patterns like: $('#menu1').on('click', function () { currentSlide = 0; });
+        // Also handles cases with clickedLink = true; after currentSlide assignment
+        // Pattern 1: Standard format with quotes
+        const pattern1 = /\$\(['"]#menu(\d+)['"]\)\.on\(['"]click['"],\s*function\s*\(\)\s*\{\s*currentSlide\s*=\s*(\d+);/g;
+        let match;
+        
+        while ((match = pattern1.exec(jsContent)) !== null) {
+            const menuId = `menu${match[1]}`;
+            const currentSlide = parseInt(match[2], 10);
+            menuToSlideMap[menuId] = currentSlide;
+        }
+        
+        // Pattern 2: More flexible pattern to catch any variations
+        // Matches: #menu1 ... currentSlide = 0
+        const pattern2 = /#menu(\d+)[^}]*?currentSlide\s*=\s*(\d+)/g;
+        let match2;
+        while ((match2 = pattern2.exec(jsContent)) !== null) {
+            const menuId = `menu${match2[1]}`;
+            const currentSlide = parseInt(match2[2], 10);
+            // Only add if not already found (pattern1 takes precedence)
+            if (!menuToSlideMap[menuId]) {
+                menuToSlideMap[menuId] = currentSlide;
+            }
+        }
+        
+        return menuToSlideMap;
+    } catch (error) {
+        console.error(`Error extracting currentSlide from JS for ${lessonPath}:`, error);
+        return {};
+    }
+}
+
+// Map segment links to srcArray menuLink property
+async function mapSegmentLinksToSrcArray(lessonId) {
+    try {
+        // Get lesson data from lessonsData
+        const lesson = lessonsData.find(l => l.lessonId === lessonId);
+        if (!lesson) {
+            throw new Error(`Lesson not found: ${lessonId}`);
+        }
+        
+        // Get video filename from videoPaths collection
+        const videoPathDoc = await db.collection('videoPaths').doc(lessonId).get();
+        if (!videoPathDoc.exists) {
+            throw new Error(`Video path not found for lesson: ${lessonId}`);
+        }
+        
+        const videoPathData = videoPathDoc.data();
+        const videoPath = videoPathData.videoPath || `videos/${lessonId}.mp4`;
+        
+        // Extract video filename (without extension)
+        const match = videoPath.match(/videos\/([^\/]+)\.mp4$/);
+        if (!match) {
+            throw new Error(`Invalid video path format: ${videoPath}`);
+        }
+        const videoFilename = match[1];
+        
+        // Get srcArray from Firestore
+        const videoDoc = await db.collection('lessons').doc(videoFilename).get();
+        if (!videoDoc.exists) {
+            throw new Error(`Video document not found: ${videoFilename}`);
+        }
+        
+        const videoData = videoDoc.data();
+        const srcArray = videoData.srcArray || [];
+        
+        if (srcArray.length === 0) {
+            throw new Error(`srcArray is empty for video: ${videoFilename}`);
+        }
+        
+        // Extract menu links from HTML
+        const menuLinks = await extractMenuLinksFromHTML(lesson.path);
+        if (menuLinks.length === 0) {
+            return { mapped: 0, skipped: true, reason: 'No menu links found' };
+        }
+        
+        // Extract currentSlide mappings from JS
+        const menuToSlideMap = await extractCurrentSlideFromJS(lesson.path);
+        if (Object.keys(menuToSlideMap).length === 0) {
+            return { mapped: 0, skipped: true, reason: 'No currentSlide mappings found' };
+        }
+        
+        // Count available segments (excluding opening segment)
+        const availableSegments = srcArray.filter(seg => seg.src_start !== null && seg.src_end !== null).length;
+        
+        // Count segment links (menu links that have currentSlide mappings)
+        const segmentLinks = menuLinks.filter(link => menuToSlideMap.hasOwnProperty(link.menuId));
+        
+        // Check if too many segment links
+        if (segmentLinks.length > availableSegments) {
+            return { 
+                mapped: 0, 
+                skipped: true, 
+                reason: `Too many segment links (${segmentLinks.length}) for available segments (${availableSegments})` 
+            };
+        }
+        
+        // Create a copy of srcArray to modify
+        const updatedSrcArray = [...srcArray];
+        let mappedCount = 0;
+        
+        // Map menuLink values to srcArray segments
+        for (const menuLink of segmentLinks) {
+            const currentSlide = menuToSlideMap[menuLink.menuId];
+            
+            // currentSlide corresponds to the index in srcArray (0-based)
+            // Skip opening segment (index 0) as it already has a menuLink
+            if (currentSlide > 0 && currentSlide < updatedSrcArray.length) {
+                const segment = updatedSrcArray[currentSlide];
+                
+                // Only map if menuLink is empty or null
+                if (!segment.menuLink || segment.menuLink === '') {
+                    segment.menuLink = menuLink.label;
+                    mappedCount++;
+                }
+            }
+        }
+        
+        // Update Firestore if any mappings were made
+        if (mappedCount > 0) {
+            await db.collection('lessons').doc(videoFilename).set({
+                srcArray: updatedSrcArray
+            }, { merge: true });
+        }
+        
+        return { mapped: mappedCount, skipped: false };
+    } catch (error) {
+        console.error(`Error mapping segment links for ${lessonId}:`, error);
+        return { mapped: 0, skipped: true, reason: error.message };
+    }
+}
+
+// Main function to map all segment links
+async function mapAllSegmentLinks() {
+    try {
+        requireAuth(); // Ensure user is authenticated
+    } catch (error) {
+        setStatus('Authentication required', 'error');
+        return;
+    }
+    
+    if (lessonsData.length === 0) {
+        setStatus('Please scan lessons first', 'error');
+        return;
+    }
+    
+    setStatus('Mapping segment links...', 'scanning');
+    if (mapSegmentLinksBtn) {
+        mapSegmentLinksBtn.disabled = true;
+    }
+    
+    let totalMapped = 0;
+    let totalSkipped = 0;
+    const skippedLessons = [];
+    
+    try {
+        for (let i = 0; i < lessonsData.length; i++) {
+            const lesson = lessonsData[i];
+            setStatus(`Mapping segment links (${i + 1}/${lessonsData.length}): ${lesson.name}...`, 'scanning');
+            
+            const result = await mapSegmentLinksToSrcArray(lesson.lessonId);
+            
+            if (result.skipped) {
+                totalSkipped++;
+                skippedLessons.push({
+                    name: lesson.name,
+                    reason: result.reason || 'Unknown reason'
+                });
+            } else {
+                totalMapped += result.mapped;
+            }
+        }
+        
+        const statusMsg = `Mapping complete: ${totalMapped} links mapped, ${totalSkipped} lessons skipped`;
+        setStatus(statusMsg, totalMapped > 0 ? 'success' : 'error');
+        
+        if (skippedLessons.length > 0) {
+            console.log('Skipped lessons:', skippedLessons);
+        }
+    } catch (error) {
+        console.error('Error mapping segment links:', error);
+        setStatus('Error mapping segment links: ' + error.message, 'error');
+    } finally {
+        if (mapSegmentLinksBtn) {
+            mapSegmentLinksBtn.disabled = false;
+        }
+    }
+}
+
+// Detect video titles using OCR for a single lesson
+async function detectVideoTitlesForLesson(lessonId) {
+    try {
+        // Get lesson data from lessonsData
+        const lesson = lessonsData.find(l => l.lessonId === lessonId);
+        if (!lesson) {
+            throw new Error(`Lesson not found: ${lessonId}`);
+        }
+        
+        // Get video filename from videoPaths collection
+        const videoPathDoc = await db.collection('videoPaths').doc(lessonId).get();
+        if (!videoPathDoc.exists) {
+            throw new Error(`Video path not found for lesson: ${lessonId}`);
+        }
+        
+        const videoPathData = videoPathDoc.data();
+        const videoPath = videoPathData.videoPath || `videos/${lessonId}.mp4`;
+        
+        // Extract video filename (without extension)
+        const match = videoPath.match(/videos\/([^\/]+)\.mp4$/);
+        if (!match) {
+            throw new Error(`Invalid video path format: ${videoPath}`);
+        }
+        const videoFilename = match[1];
+        
+        // Get srcArray to verify it exists
+        const videoDoc = await db.collection('lessons').doc(videoFilename).get();
+        if (!videoDoc.exists) {
+            throw new Error(`Video document not found: ${videoFilename}`);
+        }
+        
+        const videoData = videoDoc.data();
+        const srcArray = videoData.srcArray || [];
+        
+        if (srcArray.length === 0) {
+            return { 
+                success: false, 
+                skipped: true, 
+                reason: 'srcArray is empty for video' 
+            };
+        }
+        
+        // Extract menu links from HTML to get all available segment link labels
+        const menuLinks = await extractMenuLinksFromHTML(lesson.path);
+        const segmentLinks = menuLinks.map(link => ({ label: link.label }));
+        
+        // Call Cloud Function to detect titles and adjust srcArray
+        const detectVideoTitlesFunction = functions.httpsCallable('detectVideoTitles');
+        const result = await detectVideoTitlesFunction({
+            videoPath: videoPath,
+            videoFilename: videoFilename,
+            lessonId: lessonId,
+            segmentLinks: segmentLinks
+        });
+        
+        return {
+            success: true,
+            skipped: false,
+            detectedTitles: result.data.detectedTitles,
+            refinedSegments: result.data.refinedSegments,
+            assignedMenuLinks: result.data.assignedMenuLinks
+        };
+    } catch (error) {
+        console.error(`Error detecting video titles for ${lessonId}:`, error);
+        return { 
+            success: false, 
+            skipped: true, 
+            reason: error.message 
+        };
+    }
+}
+
+// Main function to detect video titles for all lessons
+async function detectVideoTitlesForAllLessons() {
+    try {
+        requireAuth(); // Ensure user is authenticated
+    } catch (error) {
+        setStatus('Authentication required', 'error');
+        return;
+    }
+    
+    if (lessonsData.length === 0) {
+        setStatus('Please scan lessons first', 'error');
+        return;
+    }
+    
+    setStatus('Detecting video titles...', 'scanning');
+    if (detectVideoTitlesBtn) {
+        detectVideoTitlesBtn.disabled = true;
+    }
+    
+    let totalProcessed = 0;
+    let totalSkipped = 0;
+    let totalRefined = 0;
+    let totalAssigned = 0;
+    const skippedLessons = [];
+    
+    try {
+        for (let i = 0; i < lessonsData.length; i++) {
+            const lesson = lessonsData[i];
+            setStatus(`Detecting titles (${i + 1}/${lessonsData.length}): ${lesson.name}...`, 'scanning');
+            
+            const result = await detectVideoTitlesForLesson(lesson.lessonId);
+            
+            if (result.skipped) {
+                totalSkipped++;
+                skippedLessons.push({
+                    name: lesson.name,
+                    reason: result.reason || 'Unknown reason'
+                });
+            } else {
+                totalProcessed++;
+                totalRefined += result.refinedSegments || 0;
+                totalAssigned += result.assignedMenuLinks || 0;
+            }
+        }
+        
+        const statusMsg = `Title detection complete: ${totalProcessed} processed, ${totalRefined} segments refined, ${totalAssigned} menuLinks assigned, ${totalSkipped} skipped`;
+        setStatus(statusMsg, totalProcessed > 0 ? 'success' : 'error');
+        
+        if (skippedLessons.length > 0) {
+            console.log('Skipped lessons:', skippedLessons);
+        }
+    } catch (error) {
+        console.error('Error detecting video titles:', error);
+        setStatus('Error detecting video titles: ' + error.message, 'error');
+    } finally {
+        if (detectVideoTitlesBtn) {
+            detectVideoTitlesBtn.disabled = false;
+        }
+    }
 }
 
 // Make functions available globally

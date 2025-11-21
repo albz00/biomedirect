@@ -18,6 +18,9 @@ const functions = firebase.functions();
 let availableVideos = [];
 let lessonsData = [];
 let loginScreen, dashboardScreen, loginForm, logoutBtn, scanBtn, refreshVideosBtn, statusText, loginError, lessonsList, videosList;
+let searchInput, filterButtons;
+let currentFilter = 'all';
+let searchQuery = '';
 
 // Check authentication state on load and on changes (set up immediately)
 auth.onAuthStateChanged((user) => {
@@ -67,6 +70,20 @@ document.addEventListener('DOMContentLoaded', () => {
     loginError = document.getElementById('loginError');
     lessonsList = document.getElementById('lessonsList');
     videosList = document.getElementById('videosList');
+    searchInput = document.getElementById('searchInput');
+    filterButtons = document.querySelectorAll('.filter-btn');
+
+    // Load remembered credentials if available
+    const rememberedEmail = localStorage.getItem('rememberedEmail');
+    const rememberedPassword = localStorage.getItem('rememberedPassword');
+    if (rememberedEmail && rememberedPassword) {
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const rememberMeCheckbox = document.getElementById('rememberMe');
+        if (emailInput) emailInput.value = rememberedEmail;
+        if (passwordInput) passwordInput.value = rememberedPassword;
+        if (rememberMeCheckbox) rememberMeCheckbox.checked = true;
+    }
 
     // Setup event listeners
     setupEventListeners();
@@ -112,6 +129,7 @@ function setupEventListeners() {
             
             const email = emailInput.value.trim();
             const password = passwordInput.value;
+            const rememberMe = document.getElementById('rememberMe').checked;
             
             if (!email || !password) {
                 showError('Please enter both email and password.');
@@ -122,6 +140,17 @@ function setupEventListeners() {
                 console.log('Attempting login for:', email);
                 const userCredential = await auth.signInWithEmailAndPassword(email, password);
                 console.log('Login successful:', userCredential.user.email);
+                
+                // Save credentials if "Remember Me" is checked
+                if (rememberMe) {
+                    localStorage.setItem('rememberedEmail', email);
+                    localStorage.setItem('rememberedPassword', password);
+                } else {
+                    // Clear saved credentials if not checked
+                    localStorage.removeItem('rememberedEmail');
+                    localStorage.removeItem('rememberedPassword');
+                }
+                
                 // Login successful - onAuthStateChanged will handle navigation
             } catch (error) {
                 console.error('Login error:', error);
@@ -149,13 +178,22 @@ function setupEventListeners() {
         });
     }
 
+    // View Main Menu
+    const viewMainMenuBtn = document.getElementById('viewMainMenuBtn');
+    if (viewMainMenuBtn) {
+        viewMainMenuBtn.addEventListener('click', () => {
+            window.location.href = 'TextT/CentralMenuT.html';
+        });
+    }
+
     // Logout
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             try {
                 await auth.signOut();
                 console.log('User logged out successfully');
-                // onAuthStateChanged will handle showing the login screen
+                // Redirect to main menu after logout
+                window.location.href = 'TextT/CentralMenuT.html';
             } catch (error) {
                 console.error('Logout error:', error);
                 alert('Error logging out: ' + error.message);
@@ -174,6 +212,29 @@ function setupEventListeners() {
     if (refreshVideosBtn) {
         refreshVideosBtn.addEventListener('click', async () => {
             await loadAvailableVideos();
+        });
+    }
+
+    // Search Input
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            searchQuery = e.target.value.toLowerCase().trim();
+            displayLessons();
+        });
+    }
+
+    // Filter Buttons
+    if (filterButtons) {
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                // Remove active class from all buttons
+                filterButtons.forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                e.target.classList.add('active');
+                // Update current filter
+                currentFilter = e.target.getAttribute('data-filter');
+                displayLessons();
+            });
         });
     }
 }
@@ -467,7 +528,32 @@ function displayLessons() {
         return;
     }
     
-    lessonsList.innerHTML = lessonsData.map(lesson => {
+    // Filter lessons based on search query and filter type
+    let filteredLessons = lessonsData.filter(lesson => {
+        // Apply search filter
+        if (searchQuery) {
+            const matchesSearch = lesson.name.toLowerCase().includes(searchQuery) ||
+                                 lesson.lessonId.toLowerCase().includes(searchQuery) ||
+                                 lesson.path.toLowerCase().includes(searchQuery);
+            if (!matchesSearch) return false;
+        }
+        
+        // Apply status filter
+        if (currentFilter === 'missing') {
+            return !lesson.hasVideo;
+        } else if (currentFilter === 'has-video') {
+            return lesson.hasVideo;
+        }
+        // currentFilter === 'all'
+        return true;
+    });
+    
+    if (filteredLessons.length === 0) {
+        lessonsList.innerHTML = '<p class="placeholder">No lessons match your search/filter criteria</p>';
+        return;
+    }
+    
+    lessonsList.innerHTML = filteredLessons.map(lesson => {
         const statusClass = lesson.hasVideo ? 'has-video' : 'missing';
         const statusText = lesson.hasVideo ? 'Has Video' : 'Missing';
         

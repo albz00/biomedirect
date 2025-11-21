@@ -7,6 +7,48 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 	<link rel="stylesheet" href="../CommonFiles/CentralMenu.css">
     <title>Central BioME Menu, Text</title>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <style>
+        .adminPanelBtn {
+            font-family: Arial Rounded MT, sans-serif;
+            color: #02E8E5;
+            background: transparent;
+            border: 2px solid #02E8E5;
+            font-weight: bold;
+            font-size: 2vw;
+            font-size: 2vh;
+            padding: 0.5vmin 1.5vmin;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-left: 2vmin;
+            transition: all 0.3s;
+        }
+        .adminPanelBtn:hover {
+            color: #9DFFFF;
+            border-color: #9BFFFF;
+            background: rgba(2, 232, 229, 0.1);
+            transform: scale(1.1);
+        }
+        .adminPanelBtn:active {
+            transform: scale(0.98);
+        }
+        .adminPanelBtn.hidden {
+            display: none;
+        }
+        .footer-login-link {
+            opacity: 0.5;
+            font-size: 0.9em;
+            transition: opacity 0.3s;
+        }
+        .footer-login-link:hover {
+            opacity: 1;
+        }
+        .footer-login-link.hidden {
+            display: none;
+        }
+    </style>
 </head>
 
 <body>
@@ -14,6 +56,7 @@
 
         <div class="btnTogText">                              <!-- Above Menu -->
                 <img class="btnToCentralMenuX" id="btnToCentralMenuX" src="../CommonFiles/Buttons/BTN_TogLessonMenuX.jpg" onclick="self.location.href='../TextX/CentralMenuX.html'"><span class="sr-only">Show Explanatory Text</span>
+                <button id="adminPanelBtn" class="adminPanelBtn hidden" onclick="window.location.href='../admin.html'">Admin Panel</button>
         </div>
 
         <div class="centralMenu"> <!-- grid container-->
@@ -109,10 +152,47 @@
                 <a href="AcknowledgementsT.html">Acknowledgements</a>
                 <a href="ResourcesCentralMenuT.html">Resources</a>
                 <a href="https://creativecommons.org/licenses/by-nc/3.0/legalcode" target="_blank" rel="noopener noreferrer">License, CC BY-NC</a>
+                <a id="footerLoginLink" href="../admin.html" class="footer-login-link hidden">Login</a>
         </div>
     </div>
 </body>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
 <script src="BtnTogTextCentMenuT.js"></script>
+<script>
+    // Initialize Firebase
+    const firebaseConfig = {
+        apiKey: "AIzaSyB0KbGW-4znfF19ikrUahdCyd_bEungkH4",
+        authDomain: "biome-865cc.firebaseapp.com",
+        projectId: "biome-865cc",
+        storageBucket: "biome-865cc.firebasestorage.app",
+        messagingSenderId: "952652458408",
+        appId: "1:952652458408:web:23e7f0689e9cf973be959d"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    // Check if user is logged in and show/hide admin panel button and login link
+    auth.onAuthStateChanged((user) => {
+        const adminPanelBtn = document.getElementById('adminPanelBtn');
+        const footerLoginLink = document.getElementById('footerLoginLink');
+        
+        if (adminPanelBtn) {
+            if (user) {
+                adminPanelBtn.classList.remove('hidden');
+            } else {
+                adminPanelBtn.classList.add('hidden');
+            }
+        }
+        
+        if (footerLoginLink) {
+            if (user) {
+                footerLoginLink.classList.add('hidden');
+            } else {
+                footerLoginLink.classList.remove('hidden');
+            }
+        }
+    });
+</script>
 </html>

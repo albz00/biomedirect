@@ -6,7 +6,7 @@
     <title>BioME - Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="admin.css">
     <!-- Firebase SDKs -->
         <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
@@ -126,28 +126,22 @@
                 <img src="CommonFiles/Images/Better2.png" alt="Biology from Molecules to Embryos, version 2.0" class="dashboard-header-logo" />
             </h1>
             <div class="header-buttons">
-                <button id="workflowBtn" class="btn btn-secondary" type="button" title="Step-by-step guide: how to use this panel from start to finish">
-                    <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-document-text"/></svg>
+                <button id="workflowBtn" class="btn btn-secondary howto-attn" type="button" title="Start here: a step-by-step guide to this panel">
                     <span class="btn-label">How To Use This</span>
                 </button>
                 <button id="changelogBtn" class="btn btn-secondary" title="A list of what's new and what has changed recently">
-                    <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-code-bracket"/></svg>
                     <span class="btn-label">What's New</span>
                 </button>
                 <button id="roadmapBtn" class="btn btn-secondary" title="What's planned going forward, and how to reach support">
-                    <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-flag"/></svg>
                     <span class="btn-label">Roadmap</span>
                 </button>
                 <button id="editMenuBtn" class="btn btn-secondary" title="Reorder, rename, hide, or move lessons in the main menu">
-                    <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-home"/></svg>
                     <span class="btn-label">Edit Menu</span>
                 </button>
                 <button id="viewMainMenuBtn" class="btn btn-secondary" title="Open the live menu that students see">
-                    <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-home"/></svg>
                     <span class="btn-label">View Student Menu</span>
                 </button>
                 <button id="profileBtn" class="btn btn-secondary" title="Your account and the log out button">
-                    <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-user"/></svg>
                     <span class="btn-label">My Account</span>
                 </button>
             </div>
@@ -429,201 +423,399 @@
         </div>
     </div>
 
-    <!-- Instructions Modal -->
-    <div id="instructionsModal" class="modal hidden" aria-hidden="true" role="dialog" aria-labelledby="instructionsTitle">
-        <div class="modal-backdrop"></div>
-        <div class="modal-content instructions-paper">
-            <button class="modal-close" data-close-modal aria-label="Close">&times;</button>
+    <!-- How To Use This — full-screen light guide, side-tray minimize, × to close -->
+    <div id="instructionsModal" class="guide-dock hidden" aria-hidden="true" role="complementary" aria-labelledby="instructionsTitle">
+        <div class="guide-dock-panel instructions-paper">
+            <div class="guide-dock-inner">
+            <div class="guide-dock-toolbar">
+                <div class="guide-dock-titles">
+                    <h2 id="instructionsTitle">How To Use This Panel</h2>
+                    <p class="instructions-subtitle">Opens full-screen. Minimize keeps a side tray while you work. Close with ×.</p>
+                </div>
+                <div class="guide-dock-actions">
+                    <button type="button" id="guideMinimizeBtn" class="btn btn-secondary btn-sm"><span class="btn-label">Minimize</span></button>
+                    <button type="button" class="modal-close" data-close-modal aria-label="Close">&times;</button>
+                </div>
+            </div>
             <div class="instructions-header">
-                <h2 id="instructionsTitle">How To Use This Panel</h2>
-                <p class="instructions-subtitle">A plain-English guide to turning a video into an interactive lesson</p>
                 <div class="instructions-tabs" role="tablist" aria-label="Guide sections">
-                    <button type="button" class="instructions-tab active" data-inst-tab="workflow" role="tab" aria-selected="true">Step-by-Step Guide</button>
-                    <button type="button" class="instructions-tab" data-inst-tab="doc" role="tab" aria-selected="false">More Detail</button>
+                    <button type="button" class="instructions-tab active" data-inst-tab="doc" role="tab" aria-selected="true">Full Guide</button>
+                    <button type="button" class="instructions-tab" data-inst-tab="workflow" role="tab" aria-selected="false">Quick Steps</button>
                 </div>
                 <div class="instructions-export">
                     <button type="button" id="instructionsPrintBtn" class="btn btn-secondary btn-sm"><span class="btn-label">Print / Save as PDF</span></button>
                     <button type="button" id="instructionsCopyBtn" class="btn btn-secondary btn-sm"><span class="btn-label">Copy text</span></button>
                 </div>
             </div>
+            <nav id="guideToc" class="guide-toc" aria-label="Jump to section"></nav>
             <div class="modal-body instructions-body" id="instructionsContent">
-                <article class="inst-doc hidden" data-inst-panel="doc" hidden>
-                    <p class="inst-doc-meta">More detail · How everything fits together</p>
+                <article class="inst-doc" data-inst-panel="doc">
+                    <p class="inst-doc-meta">A complete guide to the admin panel</p>
                     <p class="inst-lead">
-                        This page explains the panel in a bit more depth and lists what every button does. If you
-                        just want the steps to follow, use the <strong>Step-by-Step Guide</strong> tab instead.
+                        This panel is how you turn a recorded lesson video into the interactive lesson students actually use. Students never see this screen. Everything you save here is live for them immediately. You do not edit code. You pick a lesson, attach a video, let the panel find the pauses and chapters, check the chapter matches, and save.
                     </p>
 
-                    <h2>What this panel is for</h2>
+                    <h2 id="guide-finished-lesson">What a finished lesson is</h2>
                     <p>
-                        Each lesson is one video plus a clickable chapter menu. A student can watch it straight
-                        through, or click a chapter to jump to that part. The video also pauses at certain points and
-                        waits for the student to click before continuing, and can replay a section. This panel is
-                        where you set all of that up. You never touch any code &mdash; you just attach a video and
-                        save your changes.
+                        A lesson on the student menu is one video plus a clickable chapter list. The student can watch straight through, or click a chapter to jump to that part. At certain moments the video pauses and waits for a click before continuing. Some sections replay until the student clicks. Those behaviors are not guessed at playback time. They come from this panel, from the list you save for that lesson.
+                    </p>
+                    <p>
+                        Each lesson exists in two independent versions: <strong>With Text</strong> (words appear on screen) and <strong>Without Text</strong> (no on-screen words). They are separate videos, separate scans, and separate saves. Finishing one does not change the other. The left sidebar switch decides which version you are editing. Set it before you upload, attach, scan, or save.
                     </p>
 
-                    <h2>The pieces</h2>
-
-                    <h3>Lessons and the two versions</h3>
+                    <h2 id="guide-color-screens">How the colored screens in the video work</h2>
                     <p>
-                        Every lesson comes in two versions: one <strong>With Text</strong> (words appear on the
-                        screen) and one <strong>Without Text</strong> (no words on screen). You work on one version
-                        at a time. The <strong>Which version?</strong> switch in the left sidebar decides which one
-                        you're editing, so set it first. The two versions are separate &mdash; finishing the With
-                        Text version does not change the Without Text version.
-                    </p>
-
-                    <h3>The video</h3>
-                    <p>
-                        Each lesson has one video attached to it. You can upload a new video or pick one you already
-                        uploaded, then attach it to the lesson.
-                    </p>
-
-                    <h3>The colored screens in the video</h3>
-                    <p>
-                        The videos have full-screen colored frames built into them that tell the lesson what to do.
-                        The panel finds these automatically when you click <strong>Scan Video</strong>:
+                        The lesson videos already contain full-screen colored frames. Those frames are instructions to the player. This panel finds them when you click <strong>Scan Video</strong>. You do not place them here by hand.
                     </p>
                     <ul>
-                        <li><strong>Yellow screen</strong> &mdash; <em>pause here</em>. The video stops and waits until the student clicks.</li>
-                        <li><strong>Green screen</strong> &mdash; <em>start of a chapter</em> (it also pauses). This is the spot a menu chapter can jump to.</li>
-                        <li><strong>Red screen</strong> &mdash; <em>replay</em>. The video goes back and replays the previous section until the student clicks.</li>
-                    </ul>
-
-                    <h3>The list of pauses and chapters</h3>
-                    <p>
-                        When you scan a video, the panel fills in a list (under <strong>Video Pauses &amp; Chapters</strong>)
-                        of every spot where the video pauses, starts a chapter, or replays, in the order they happen.
-                        This list is what makes the lesson interactive.
-                    </p>
-
-                    <h2>Scanning a video</h2>
-                    <p>
-                        <strong>Scan Video</strong> looks through the attached video, finds all the yellow, green,
-                        and red screens, and builds the list of pauses and chapters for you. Running it again rebuilds
-                        the list from scratch. <strong>Clear &amp; Start Over</strong> erases the list (the video stays
-                        attached) so you can scan again from a clean slate.
-                    </p>
-
-                    <h2>Matching chapters automatically</h2>
-                    <p>
-                        Scanning finds <em>where</em> the chapters start, but not <em>which</em> menu chapter each one
-                        is. <strong>Auto-Match Chapters</strong> has the AI read the title on each chapter screen in
-                        the video and match it to a chapter in the menu. It fills in the <strong>Chapter Matches</strong>
-                        list for you to check. Fix any wrong guesses with the dropdowns, then click
-                        <strong>Save Chapter Links</strong>. After that, clicking a chapter in the student menu jumps
-                        straight to the right spot in the video. Leave a row set to "&mdash; none &mdash;" if it
-                        shouldn't link anywhere.
-                    </p>
-
-                    <h2>What students see</h2>
-                    <p>
-                        On the live lesson, the video pauses at the yellow and green screens, replays at the red ones,
-                        and jumps to the right place when a student clicks a chapter &mdash; all based on what you
-                        saved here. Anything you save takes effect for students right away.
-                    </p>
-
-                    <h2>What each button does</h2>
-
-                    <h3>Top of the page (header)</h3>
-                    <ul>
-                        <li><strong>How To Use This</strong> &mdash; opens this guide.</li>
-                        <li><strong>What's New</strong> &mdash; a list of recent changes to the panel.</li>
-                        <li><strong>Edit Menu</strong> &mdash; reorder, rename, hide, or move lessons in the main menu.</li>
-                        <li><strong>View Student Menu</strong> &mdash; opens the live menu students see.</li>
-                        <li><strong>My Account</strong> &mdash; your account info and the Log Out button.</li>
-                    </ul>
-
-                    <h3>The bar under the header</h3>
-                    <ul>
-                        <li><strong>Load Lessons &amp; Videos</strong> &mdash; loads the latest list of lessons and your uploaded videos. Click this first. Lessons that still need a video show up at the top.</li>
-                        <li><strong>Upload Video</strong> &mdash; uploads one or more video files from your computer. Name a "without text" file ending in <code>_x</code> so it files itself in the right place.</li>
-                        <li><strong>Status message</strong> &mdash; progress and results pop up in the bottom-right corner while a task runs.</li>
-                    </ul>
-
-                    <h3>Left sidebar</h3>
-                    <ul>
-                        <li><strong>Which version?</strong> &mdash; choose With Text or Without Text. Everything you do applies to the version selected here. Set it first.</li>
-                        <li><strong>Find a lesson</strong> &mdash; type to filter the lesson list by name.</li>
-                        <li><strong>Show</strong> &mdash; show All lessons, only those that Need a Video, or only those that Have a Video.</li>
-                        <li><strong>Arrow button</strong> &mdash; hides the sidebar to give yourself more room.</li>
-                    </ul>
-
-                    <h3>Lesson &amp; Video</h3>
-                    <ul>
-                        <li><strong>Lesson Name</strong> &mdash; the name shown in the menu. Changing it is safe and doesn't affect anything else.</li>
-                        <li><strong>Video dropdown + Assign/Update</strong> &mdash; pick a video and attach it to the lesson.</li>
-                    </ul>
-
-                    <h3>Video Pauses &amp; Chapters</h3>
-                    <ul>
-                        <li><strong>Scan Video</strong> &mdash; finds the pauses, chapters, and replays in the video and builds the list.</li>
-                        <li><strong>Auto-Match Chapters</strong> &mdash; has the AI match each chapter screen to a menu chapter.</li>
-                        <li><strong>Save Chapter Links</strong> &mdash; saves the chapter matches so menu chapters become clickable jumps.</li>
-                        <li><strong>Save Changes</strong> &mdash; saves the list of pauses and chapters.</li>
-                        <li><strong>Clear &amp; Start Over</strong> &mdash; erases the list so you can scan again. The video stays attached.</li>
+                        <li><span class="inst-swatch inst-swatch-yellow">Yellow</span> means pause. Playback stops and waits until the student clicks, then continues.</li>
+                        <li><span class="inst-swatch inst-swatch-green">Green</span> means a chapter starts. It also pauses. This is the spot a menu chapter can jump to.</li>
+                        <li><span class="inst-swatch inst-swatch-red">Red</span> means replay. Playback goes back to the previous pause and loops that stretch until the student clicks.</li>
                     </ul>
                     <p>
-                        The table lists every pause, chapter, and replay in order, with the time (in seconds) each
-                        one starts and ends.
+                        Scan finds <em>where</em> those things happen. It does not decide <em>which menu chapter</em> each green screen belongs to. That is what <strong>Auto-Match Chapters</strong> is for. Both pieces have to be saved or students will not get the full interactive lesson.
                     </p>
 
-                    <h3>Available Videos</h3>
+                    <h2 id="guide-login">Logging in</h2>
                     <p>
-                        Open this section to see your uploaded videos, grouped into With Text and Without Text.
-                        <strong>Preview</strong> plays a video in a pop-up without attaching it.
+                        The login screen is only for people who set up lessons. Students never use it. Sign in with the email and password for this project.
+                    </p>
+                    <ul>
+                        <li><strong>Remember Me</strong> keeps the email and password filled on this browser so you are not typing them every time. Only use it on a computer you trust.</li>
+                        <li><strong>Forgot password?</strong> sends a reset email to the address in the email field.</li>
+                        <li><strong>Back to Main Menu</strong> leaves admin and opens the student menu without logging in.</li>
+                    </ul>
+                    <p>
+                        After a successful login, the dashboard opens and the lesson list starts loading on its own. You should not need to click anything before you see lessons on the left. Stay logged in while you work. If you are signed out, saves will fail.
                     </p>
 
-                    <h2>Good to know</h2>
+                    <h2 id="guide-top-bar">The top bar</h2>
+                    <p>
+                        The dark bar across the top is navigation out of the working area. None of these buttons attach a video or scan one. They open help, history, the menu editor, the live student menu, or your account.
+                    </p>
                     <ul>
-                        <li>Stay logged in so your changes save.</li>
-                        <li>Anything you save shows up for students right away.</li>
-                        <li>Pick the right version (With Text / Without Text) <em>before</em> uploading or attaching a video.</li>
-                        <li><strong>Developer Tools</strong> (bottom of the page) adds extra technical buttons for troubleshooting. You normally don't need it &mdash; leave it off.</li>
+                        <li><strong>How To Use This</strong> opens this guide full-screen. Minimize keeps it in a side tray while you work. Expand brings it back to full-screen. × closes it.</li>
+                        <li><strong>What's New</strong> is a running list of what changed in the panel. It is history, not instructions.</li>
+                        <li><strong>Roadmap</strong> is what is planned next, plus contact details if something is broken.</li>
+                        <li><strong>Edit Menu</strong> changes the student menu itself: order, names, which lessons show, which section they sit in. That is separate from attaching videos. See the Edit Menu section below.</li>
+                        <li><strong>View Student Menu</strong> opens the live menu students use, in a new tab. Use it after you save, to click a couple of chapters and confirm they jump to the right spots and the pauses feel right.</li>
+                        <li><strong>My Account</strong> shows the email you are signed in as, and is where you log out.</li>
                     </ul>
+
+                    <h2 id="guide-load-upload">Load Lessons &amp; Videos, and Upload Video</h2>
+                    <p>
+                        The compact bar under the header is for bringing files and the lesson list into the panel.
+                    </p>
+                    <p>
+                        <strong>Load Lessons &amp; Videos</strong> rebuilds the left-hand list from the current menu and your uploaded videos. It also refreshes the Available Videos section. This now runs automatically when you enter the dashboard. Click it again when you have uploaded new files, changed the menu, or the list looks stale. Lessons that still need a video are easy to spot in the tree (and with the Needs Video filter).
+                    </p>
+                    <p>
+                        <strong>Upload Video</strong> opens a file picker for one or more MP4 files from your computer. Uploading does not attach the file to a lesson by itself, except in one convenience case: if you upload a single file whose name matches a lesson, the panel will try to attach it. Otherwise you still pick the lesson and use Assign. Name a Without Text file so it ends in <code>_x</code> (for example <code>cleavage_stage_x.mp4</code>). That puts it in the Without Text group. Files that do not end in <code>_x</code> go with the With Text videos.
+                    </p>
+                    <p>
+                        Progress and results appear as a small message in the bottom-right corner. Scanning a long video can take a while. Watch that message instead of clicking the same button over and over.
+                    </p>
+
+                    <h2 id="guide-sidebar">The left sidebar: finding and choosing a lesson</h2>
+                    <p>
+                        The sidebar is the table of contents for this panel. You always work on one lesson at a time, for one version at a time. Click a lesson name to select it. The gray highlight is the selected lesson. Everything on the right then belongs to that lesson and that version.
+                    </p>
+                    <h3>Which version?</h3>
+                    <p>
+                        <strong>With Text</strong> and <strong>Without Text</strong> switch which copy of every lesson you are editing. The tree, the attached video, the pause list, and the chapter links are all per version. If you attach a With Text video while Without Text is selected, you have attached it to the wrong copy. Set this first, every time you sit down.
+                    </p>
+                    <h3>Find a lesson</h3>
+                    <p>
+                        Type part of a name to hide lessons that do not match. This only filters the list. It does not rename anything.
+                    </p>
+                    <h3>Show</h3>
+                    <p>
+                        <strong>All</strong> shows every lesson. <strong>Needs Video</strong> shows only lessons that still have no video attached for the current version. <strong>Has Video</strong> shows only lessons that already have one. Use Needs Video when you are working through a backlog of uploads.
+                    </p>
+                    <h3>The lesson list</h3>
+                    <p>
+                        Lessons are grouped by section, the same sections students see on the menu. Click a section title to collapse or expand it. A colored dot next to a lesson name is status: one color means a video is attached, the other means it still needs one. If a lesson or section is hidden from students via Edit Menu, it still appears here so you can work on it, usually with a Hidden mark.
+                    </p>
+                    <p>
+                        Some sections have a name field and a <strong>Save</strong> button. That renames the section as it appears in the menu. It does not delete the section or move lessons.
+                    </p>
+                    <p>
+                        The small arrow at the top of the sidebar collapses the whole list so the working area on the right is wider.
+                    </p>
+
+                    <h2 id="guide-lesson-video">Lesson &amp; Video</h2>
+                    <p>
+                        This card is the identity of the selected lesson: what it is called, whether it has a video, and which file is attached. Collapse the header if you want more room for the pause list below.
+                    </p>
+                    <p>
+                        Until you click a lesson, this card is empty. After you click one you will see the display name, a Has Video or Needs Video label, the section it belongs to, the original name if you renamed it, and the current video file if one is attached.
+                    </p>
+                    <h3>Lesson Name</h3>
+                    <p>
+                        This is the name students see in the menu. Change the text and click <strong>Save Lesson Name</strong>. Renaming is safe. It does not change the video, the pauses, or the chapter links. It also does not move the lesson to a different section. Use Edit Menu if you need to move or hide it.
+                    </p>
+                    <h3>Attach a video</h3>
+                    <p>
+                        A lesson plays whichever file you assign here. Use the dropdown to pick from videos already uploaded, then click <strong>Assign</strong> (or <strong>Update</strong> if one is already attached). Assigning a different file does not by itself rebuild pauses and chapters. After you attach or change a video, scan it.
+                    </p>
+                    <p>
+                        If the dropdown is empty, upload first, then click Load Lessons &amp; Videos if the new file does not appear.
+                    </p>
+
+                    <h2 id="guide-pauses">Video Pauses &amp; Chapters</h2>
+                    <p>
+                        This is the heart of the panel. The attached video is just footage until this list exists. The list is every pause, chapter start, and replay, in time order. The student player follows this list. If it is empty, the lesson is a plain video with no interactive pauses and no working chapter jumps.
+                    </p>
+                    <h3><span class="inst-chip inst-chip-scan">Scan Video</span></h3>
+                    <p>
+                        Scan reads the attached file, finds the yellow, green, and red screens, and builds the list for you. You should not be typing timestamps by hand for a normal lesson. Scanning again rebuilds the list from scratch from the current video. That can overwrite a list you already saved for this version, so do not scan again unless you mean to replace it.
+                    </p>
+                    <p>
+                        Scanning takes time. The bottom-right message tells you it is working. Stay on the page until it finishes.
+                    </p>
+                    <h3>The list itself</h3>
+                    <p>
+                        Each row is one event. You will see what it does (pause, chapter, replay), when it starts, and when it ends, in seconds. After a scan you can look down the list and see whether the shape of the lesson looks right: chapters where you expect them, pauses between them, replays where a segment should loop.
+                    </p>
+                    <h3><span class="inst-chip inst-chip-match">Auto-Match Chapters</span></h3>
+                    <p>
+                        Scan knows a green screen is “a chapter,” but not that it is “Cleavage” or “Gastrulation.” Auto-Match Chapters has the system read the title on each chapter screen in the video and match it to a chapter in the student menu. It fills in the <strong>Chapter Matches</strong> list. It can be wrong. You are expected to check it.
+                    </p>
+                    <p>
+                        The status line under the buttons tells you whether matching has been run, is running, succeeded, or failed.
+                    </p>
+                    <h3>Chapter Matches</h3>
+                    <p>
+                        Each row is one title screen the system found. You will see when it appears, the title it read, the menu chapter it guessed, and how sure it was. The dropdown is the important control. Pick the correct menu chapter, or set the row to none if that screen should not link anywhere.
+                    </p>
+                    <p>
+                        The reviewed checkbox is only a note to yourself. It does not change student playback. Saving is what matters.
+                    </p>
+                    <h3><span class="inst-chip inst-chip-links">Save Chapter Links</span> and <span class="inst-chip inst-chip-save">Save Changes</span></h3>
+                    <p>
+                        These are two different saves. You usually need both.
+                    </p>
+                    <ul>
+                        <li><span class="inst-chip inst-chip-links">Save Chapter Links</span> stores which menu chapters jump to which times. After this, a student clicking a chapter should land on that chapter’s title screen / start.</li>
+                        <li><span class="inst-chip inst-chip-save">Save Changes</span> stores the pause, chapter, and replay list itself. After this, the video should pause and replay at the scanned spots.</li>
+                    </ul>
+                    <p>
+                        If you only save chapter links, jumps may work but pauses may be missing. If you only save changes, pauses may work but chapter clicks may not. Do both after you are happy with the list and the matches.
+                    </p>
+                    <h3><span class="inst-chip inst-chip-clear">Clear &amp; Start Over</span></h3>
+                    <p>
+                        This erases the pause and chapter list for this lesson version so you can scan again from a clean slate. The attached video stays. Use it when the list is empty, garbled, leftover from a different file, or you attached the right video after a bad scan. Then scan again, match chapters again, and save both buttons again.
+                    </p>
+
+                    <h2 id="guide-available">Available Videos</h2>
+                    <p>
+                        This is a library of files you have uploaded, not the lesson list. Open it to see With Text and Without Text groups, with counts. <strong>Preview</strong> plays a file in a pop-up without attaching it to a lesson. Use preview to confirm you have the right file before you assign it.
+                    </p>
+
+                    <h2 id="guide-edit-menu">Edit Menu</h2>
+                    <p>
+                        Edit Menu changes the student menu structure. It does not attach videos or scan them. Changes apply to both the With Text and Without Text menus. Nothing is permanently deleted: hidden items can be shown again, and Reset to default restores the original order from the built-in menu.
+                    </p>
+                    <ul>
+                        <li><strong>Reorder</strong> with the up and down controls on a section or lesson.</li>
+                        <li><strong>Rename</strong> by editing the name field.</li>
+                        <li><strong>Hide / show</strong> so a lesson or section stays in the system but does not appear for students. You can still select hidden lessons in the admin sidebar.</li>
+                        <li><strong>Move</strong> a lesson to another section with the dropdown on that row.</li>
+                        <li><strong>+ Add section</strong> creates an empty section you can rename and move lessons into.</li>
+                        <li><strong>Reset to default</strong> throws away the overlay and restores the original menu. This is not a small undo. Do not use it unless you mean it.</li>
+                        <li><strong>Save</strong> in the Edit Menu footer is what actually publishes the structure. If you close the window without saving, those edits are not live.</li>
+                    </ul>
+
+                    <h2 id="guide-students">What students see after you save</h2>
+                    <p>
+                        Saves are live. There is no separate publish step. When a student opens that lesson version they get:
+                    </p>
+                    <ul>
+                        <li>The video you attached.</li>
+                        <li>Pauses at <span class="inst-swatch inst-swatch-yellow">Yellow</span> and <span class="inst-swatch inst-swatch-green">Green</span> screens, continuing on click.</li>
+                        <li>Replays at <span class="inst-swatch inst-swatch-red">Red</span> screens, until they click.</li>
+                        <li>Chapter menu items that jump to the times you saved in Chapter Matches, for every row that is not set to none.</li>
+                    </ul>
+                    <p>
+                        Always spot-check with <strong>View Student Menu</strong> after the first save on a lesson. Click two or three chapters, let a pause happen, and confirm a replay if the lesson has one.
+                    </p>
+
+                    <h2 id="guide-toasts">The messages in the corner</h2>
+                    <p>
+                        The bottom-right pop-up is the status of the current task: loading the list, uploading, scanning, matching, saving, or an error. It stays visible while you scroll. If something fails, read that message before clicking again. Long scans are normal. Repeated clicks can stack work and make a mess.
+                    </p>
+
+                    <h2 id="guide-dev">Developer Tools</h2>
+                    <p>
+                        The button at the very bottom of the page turns on extra technical controls for troubleshooting. Leave it off for normal work. You do not need it to attach videos, scan, match chapters, edit the menu, or save.
+                    </p>
+
+                    <h2 id="guide-wrong">If something looks wrong</h2>
+                    <ul>
+                        <li><strong>A chapter jumps to the wrong place.</strong> Select the lesson, open Chapter Matches, fix that row’s dropdown, click Save Chapter Links again. Spot-check the student menu.</li>
+                        <li><strong>The pause list is empty or obviously wrong.</strong> Confirm the right video is attached and the right version is selected. Click Clear &amp; Start Over, then Scan Video, then Auto-Match Chapters, then both saves.</li>
+                        <li><strong>You attached the wrong video.</strong> Assign the correct one, then scan and match again. The old list belongs to the old file.</li>
+                        <li><strong>You edited the Without Text copy by accident.</strong> Switch Which version?, then do the work again on the correct copy. The two versions do not copy from each other.</li>
+                        <li><strong>Pauses work but chapter clicks do not, or the reverse.</strong> You likely saved only one of the two buttons. Save Chapter Links and Save Changes both.</li>
+                        <li><strong>The left list is empty after login.</strong> Wait for the corner message to finish. If it errors, click Load Lessons &amp; Videos. Stay logged in.</li>
+                        <li><strong>A new upload does not appear in the dropdown.</strong> Click Load Lessons &amp; Videos. Confirm the file was an MP4 and, for Without Text, that the name ends in <code>_x</code>.</li>
+                        <li><strong>A save failed.</strong> You were probably signed out. Log in and save again. The student lesson does not change until a save succeeds.</li>
+                    </ul>
+
+                    <h2 id="guide-order">A reliable order of work</h2>
+                    <p>
+                        Work one lesson version at a time. Do these in this order. Skipping a step is the usual reason a lesson looks unfinished on the student menu.
+                    </p>
+                    <ol class="inst-steps-color">
+                        <li>
+                            <span class="inst-step-num inst-step-num--1">1</span>
+                            <div class="inst-step-body">
+                                <strong>Set Which version?</strong>
+                                <p>With Text or Without Text in the left sidebar. Everything after this applies only to that copy. Finishing one does not copy to the other.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--2">2</span>
+                            <div class="inst-step-body">
+                                <strong>Choose a lesson</strong>
+                                <p>Click it in the left list. Use search or Needs Video if the list is long. The gray highlight is the lesson you are editing.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--3">3</span>
+                            <div class="inst-step-body">
+                                <strong>Attach the video</strong>
+                                <p>Upload if needed (Without Text filenames end in <code>_x</code>), or pick an uploaded file in the dropdown and click Assign. Preview first if you are unsure it is the right file.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--4">4</span>
+                            <div class="inst-step-body">
+                                <strong>Scan Video</strong>
+                                <p>This finds the <span class="inst-swatch inst-swatch-yellow">Yellow</span> pauses, <span class="inst-swatch inst-swatch-green">Green</span> chapter starts, and <span class="inst-swatch inst-swatch-red">Red</span> replays. Wait for the corner message to finish. Do not scan again unless you mean to replace the list.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--5">5</span>
+                            <div class="inst-step-body">
+                                <strong>Auto-Match Chapters</strong>
+                                <p>The panel reads each chapter title in the video and guesses the matching menu chapter. It can be wrong. The next step is you checking it.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--6">6</span>
+                            <div class="inst-step-body">
+                                <strong>Check Chapter Matches</strong>
+                                <p>Fix wrong dropdowns. Set anything that is not a real chapter to none. The reviewed checkbox is only a note to yourself.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--7">7</span>
+                            <div class="inst-step-body">
+                                <strong>Save Chapter Links</strong>
+                                <p>This is what makes a student clicking a chapter jump to the right time. Without this save, jumps will not work even if the list looks perfect here.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--8">8</span>
+                            <div class="inst-step-body">
+                                <strong>Save Changes</strong>
+                                <p>This stores the pause, chapter, and replay list. Without this save, the video will not pause or replay for students. You need this <em>and</em> Save Chapter Links.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--9">9</span>
+                            <div class="inst-step-body">
+                                <strong>Check it on the student menu</strong>
+                                <p>Open View Student Menu. Click two or three chapters, let a pause happen, and confirm a replay if the lesson has one. Then switch versions if you still need the other copy.</p>
+                            </div>
+                        </li>
+                    </ol>
                 </article>
 
-                <article class="inst-doc inst-doc--workflow" data-inst-panel="workflow">
-                    <p class="inst-doc-meta">The simple steps to follow for each lesson</p>
+                <article class="inst-doc inst-doc--workflow hidden" data-inst-panel="workflow" hidden>
+                    <p class="inst-doc-meta">The short order of work for one lesson version</p>
                     <p class="inst-lead">
-                        Here's everything you do, in order. It takes only a few minutes per lesson once you've done
-                        it a couple of times. Want more background on any of it? Use the <strong>More Detail</strong>
-                        tab.
+                        Use this when you already know the panel and just want the sequence. The Full Guide tab explains every section.
                     </p>
 
-                    <h2>Before you start</h2>
+                    <h2 id="guide-before">Before you start</h2>
                     <p>
-                        Make sure you're logged in (top-right <strong>My Account</strong>), and decide whether you're
-                        working on the <strong>With Text</strong> or <strong>Without Text</strong> version of the
-                        lesson. Everything you do applies to whichever version is selected in the left sidebar.
+                        You should already be logged in. The lesson list loads by itself. Decide whether you are working on <strong>With Text</strong> or <strong>Without Text</strong> and set that switch in the left sidebar first. Everything you do applies only to that version.
                     </p>
 
-                    <h2>The steps</h2>
-                    <ol class="inst-flow">
-                        <li><strong>Click "Load Lessons &amp; Videos."</strong> This loads every lesson and every video you've uploaded. Lessons that still need a video appear at the top.</li>
-                        <li><strong>Pick the version.</strong> Use the <strong>Which version?</strong> switch in the sidebar to choose With Text or Without Text. Double-check it before uploading.</li>
-                        <li><strong>Choose a lesson</strong> from the list on the left.</li>
-                        <li><strong>Attach a video.</strong> Either click <strong>Upload Video</strong> to add one from your computer (name a "without text" file ending in <code>_x</code>), or pick one you already uploaded from the dropdown, then click <strong>Assign</strong>.</li>
-                        <li><strong>Click "Scan Video."</strong> The panel finds the pauses, chapters, and replays in the video and builds the list. This can take a moment &mdash; watch the message in the bottom-right corner.</li>
-                        <li><strong>Click "Auto-Match Chapters."</strong> The AI reads each chapter title in the video and matches it to a menu chapter.</li>
-                        <li><strong>Check the matches.</strong> Look over the <strong>Chapter Matches</strong> list. Fix any wrong ones with the dropdown; set anything that isn't a real chapter to <em>&mdash; none &mdash;</em>.</li>
-                        <li><strong>Click "Save Chapter Links," then "Save Changes."</strong> The first saves the chapter jumps; the second saves the list of pauses and chapters. Do both.</li>
-                        <li><strong>Check it.</strong> Open <strong>View Student Menu</strong>, play the lesson, and click a couple of chapters to make sure they jump to the right spots and the pauses feel right.</li>
+                    <h2 id="guide-steps">The steps</h2>
+                    <ol class="inst-steps-color">
+                        <li>
+                            <span class="inst-step-num inst-step-num--1">1</span>
+                            <div class="inst-step-body">
+                                <strong>Set Which version?</strong>
+                                <p>With Text or Without Text. Check it before you upload or attach anything.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--2">2</span>
+                            <div class="inst-step-body">
+                                <strong>Choose a lesson</strong>
+                                <p>Click it in the left list. Use search or Needs Video if the list is long.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--3">3</span>
+                            <div class="inst-step-body">
+                                <strong>Attach a video</strong>
+                                <p>Upload one if needed (Without Text filenames end in <code>_x</code>), or pick an uploaded file and click Assign.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--4">4</span>
+                            <div class="inst-step-body">
+                                <strong>Scan Video</strong>
+                                <p>Wait for the corner message to finish. This finds <span class="inst-swatch inst-swatch-yellow">Yellow</span> pauses, <span class="inst-swatch inst-swatch-green">Green</span> chapters, and <span class="inst-swatch inst-swatch-red">Red</span> replays.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--5">5</span>
+                            <div class="inst-step-body">
+                                <strong>Auto-Match Chapters</strong>
+                                <p>The panel reads each chapter title and guesses the matching menu chapter.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--6">6</span>
+                            <div class="inst-step-body">
+                                <strong>Check Chapter Matches</strong>
+                                <p>Fix wrong dropdowns. Set anything that is not a real chapter to none.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--7">7</span>
+                            <div class="inst-step-body">
+                                <strong>Save Chapter Links, then Save Changes</strong>
+                                <p>You need both. Links make chapter clicks jump. Changes save pauses and replays.</p>
+                            </div>
+                        </li>
+                        <li>
+                            <span class="inst-step-num inst-step-num--9">8</span>
+                            <div class="inst-step-body">
+                                <strong>Check it</strong>
+                                <p>Open View Student Menu, click a couple of chapters, and confirm the pauses feel right.</p>
+                            </div>
+                        </li>
                     </ol>
 
-                    <h2>If something looks wrong</h2>
+                    <h2 id="guide-workflow-wrong">If something looks wrong</h2>
                     <ul>
-                        <li><strong>A chapter jumps to the wrong place</strong> &mdash; reopen the lesson, fix that row in the Chapter Matches list, and click <strong>Save Chapter Links</strong> again.</li>
-                        <li><strong>The list looks wrong or empty</strong> &mdash; click <strong>Clear &amp; Start Over</strong>, then <strong>Scan Video</strong> again.</li>
-                        <li><strong>You attached the wrong video</strong> &mdash; attach the correct one and scan again.</li>
+                        <li><strong>Wrong jump</strong> &mdash; fix that row in Chapter Matches and Save Chapter Links again.</li>
+                        <li><strong>Empty or wrong list</strong> &mdash; Clear &amp; Start Over, then Scan Video again.</li>
+                        <li><strong>Wrong video or wrong version</strong> &mdash; attach the right file on the right version, then scan and save again.</li>
                     </ul>
 
                     <p class="inst-doc-footnote">
-                        That's the whole process. Most of the time is just waiting for the scan and the chapter
-                        matching to finish.
+                        Most of the time is waiting for the scan and the chapter matching to finish. Checking the matches is the part that needs your eyes.
                     </p>
                 </article>
+            </div>
             </div>
         </div>
     </div>

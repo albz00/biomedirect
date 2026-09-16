@@ -1,12 +1,16 @@
+@import url("ViewportFit.css");
+
+body {
+    background:
+        linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)),
+        url("Images/NewCentralMenuBackground.png") center / cover no-repeat fixed;
+}
+
 .entireAcknowledgePage {
     font-family: Arial Bold, sans-serif;
     line-height: .8vw;
     color: darkblue;
-    width: 90vw;
-	height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
-/*	max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
-	max-width: 150vh; /* (1650/1200) * 100 ... ratio = 1.375*/
-	max-height: 89.7vh;
+    background-color: white;
     border-color: darkcyan;
     border-width: 2vw;
     border-left-style: ridge;
@@ -14,10 +18,32 @@
     border-right-style: groove;
     border-bottom-style: groove;
     margin: auto;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     align-content: center;
     text-align: center;
     position: relative;
+}
+
+.acknowledgementsBack {
+    position: absolute;
+    top: 1.5vmin;
+    right: 1.5vmin;
+    z-index: 2;
+    color: darkblue;
+    font: 700 1.5vmin/1 Arial, sans-serif;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.acknowledgementsBack:hover {
+    color: #087f87;
+    text-decoration: underline;
+}
+
+.acknowledgementsBack:focus-visible {
+    outline: 0.2vmin solid darkblue;
+    outline-offset: 0.2vmin;
 }
 
 .acknowledge {

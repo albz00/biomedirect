@@ -1,11 +1,9 @@
+@import url("ViewportFit.css");
+
 .entireFeedbackPage {
     font-family: Arial, sans-serif;
     font-size: 1.39vw;
     color: darkblue;
-    width: 90vw;
-    height: 61.81vw; /* (1020/1650) * 100 */
-    max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
-    max-height: 89.7vh;
     border-color: darkcyan;
     border-width: 4vmin;
     border-left-style: ridge;

@@ -26,6 +26,8 @@ let profileBtn, profileModal;
 let searchInput, filterButtons;
 let currentFilter = 'all';
 let searchQuery = '';
+/** Prevents duplicate auto-loads when auth and DOMContentLoaded both show the dashboard. */
+let dashboardAutoLoadStarted = false;
 /** Active video variant: 't' (with text, lessonId *_t) or 'x' (no text, lessonId *_x). */
 let currentVariant = 't';
 let selectedLessonId = null;
@@ -159,8 +161,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentUser = auth.currentUser;
     if (currentUser) {
         showDashboard();
-        // Automatically scan lessons and videos on load for convenience
-        refreshDashboard().catch((e) => console.error('Auto-refresh failed:', e));
     } else {
         showLogin();
     }
@@ -302,14 +302,113 @@ function setupEventListeners() {
     // Instructions / Changelog modals
     function openModal(modal) {
         if (!modal) return;
+        if (modal === instructionsModal) {
+            openGuide();
+            return;
+        }
         modal.classList.remove('hidden');
         modal.setAttribute('aria-hidden', 'false');
     }
 
     function closeModal(modal) {
         if (!modal) return;
+        if (modal === instructionsModal) {
+            closeGuide();
+            return;
+        }
         modal.classList.add('hidden');
         modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function isGuideVisible() {
+        return !!(instructionsModal && !instructionsModal.classList.contains('hidden'));
+    }
+
+    function isGuideExpanded() {
+        return isGuideVisible() && !instructionsModal.classList.contains('guide-tray');
+    }
+
+    function isGuideOpen() {
+        return isGuideExpanded();
+    }
+
+    function syncGuideChrome() {
+        const minBtn = document.getElementById('guideMinimizeBtn');
+        const label = minBtn && minBtn.querySelector('.btn-label');
+        if (label) {
+            label.textContent = instructionsModal.classList.contains('guide-tray') ? 'Expand' : 'Minimize';
+        }
+        if (minBtn) {
+            minBtn.setAttribute('title', instructionsModal.classList.contains('guide-tray')
+                ? 'Open the guide full-screen'
+                : 'Keep the guide in a side tray while you work');
+        }
+    }
+
+    function openGuide(tabName) {
+        if (!instructionsModal) return;
+        instructionsModal.classList.remove('hidden', 'guide-tray', 'guide-minimized');
+        instructionsModal.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('guide-open');
+        document.body.classList.remove('guide-tray', 'guide-minimized');
+        markHowtoSeen();
+        syncGuideChrome();
+        if (tabName) setInstructionsTab(tabName);
+        else buildGuideToc();
+    }
+
+    function dockGuide() {
+        if (!instructionsModal) return;
+        instructionsModal.classList.remove('hidden');
+        instructionsModal.classList.add('guide-tray');
+        instructionsModal.classList.remove('guide-minimized');
+        instructionsModal.setAttribute('aria-hidden', 'false');
+        document.body.classList.remove('guide-open', 'guide-minimized');
+        document.body.classList.add('guide-tray');
+        syncGuideChrome();
+    }
+
+    function minimizeGuide() {
+        dockGuide();
+    }
+
+    function closeGuide() {
+        if (!instructionsModal) return;
+        instructionsModal.classList.add('hidden');
+        instructionsModal.classList.remove('guide-tray', 'guide-minimized');
+        instructionsModal.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('guide-open', 'guide-tray', 'guide-minimized');
+    }
+
+    function buildGuideToc() {
+        const toc = document.getElementById('guideToc');
+        if (!toc || !instructionsModal) return;
+        const panel = instructionsModal.querySelector('.inst-doc[data-inst-panel]:not(.hidden)');
+        toc.innerHTML = '';
+        if (!panel) return;
+        const heads = panel.querySelectorAll('h2[id]');
+        if (!heads.length) return;
+        const label = document.createElement('span');
+        label.className = 'guide-toc-label';
+        label.textContent = 'Jump to';
+        toc.appendChild(label);
+        const body = instructionsModal.querySelector('.instructions-body');
+        heads.forEach((h) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'guide-toc-link';
+            btn.textContent = h.textContent.trim();
+            btn.addEventListener('click', () => {
+                const target = document.getElementById(h.id);
+                if (!target) return;
+                if (typeof target.scrollIntoView === 'function') {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } else if (body) {
+                    body.scrollTop = target.offsetTop;
+                }
+            });
+            toc.appendChild(btn);
+        });
     }
 
     // Instructions modal tabs (Documentation / Workflow)
@@ -329,26 +428,50 @@ function setupEventListeners() {
         });
         const body = instructionsModal.querySelector('.instructions-body');
         if (body) body.scrollTop = 0;
+        buildGuideToc();
     }
 
     if (instructionsModal) {
         instructionsModal.querySelectorAll('.instructions-tab').forEach((tab) => {
             tab.addEventListener('click', () => setInstructionsTab(tab.getAttribute('data-inst-tab')));
         });
+        const guideMinimizeBtn = document.getElementById('guideMinimizeBtn');
+        if (guideMinimizeBtn) {
+            guideMinimizeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (instructionsModal.classList.contains('guide-tray')) {
+                    openGuide();
+                } else {
+                    dockGuide();
+                }
+            });
+        }
     }
 
     if (instructionsBtn && instructionsModal) {
         instructionsBtn.addEventListener('click', () => {
-            setInstructionsTab('doc');
-            openModal(instructionsModal);
+            openGuide('doc');
         });
     }
 
     const workflowBtn = document.getElementById('workflowBtn');
+    const HOWTO_SEEN_KEY = 'biomeAdminHowtoSeen';
+    function markHowtoSeen() {
+        if (!workflowBtn) return;
+        workflowBtn.classList.add('howto-attn--seen');
+        try { localStorage.setItem(HOWTO_SEEN_KEY, '1'); } catch (e) { /* ignore */ }
+    }
+    if (workflowBtn) {
+        try {
+            if (localStorage.getItem(HOWTO_SEEN_KEY)) {
+                workflowBtn.classList.add('howto-attn--seen');
+            }
+        } catch (e) { /* ignore */ }
+    }
     if (workflowBtn && instructionsModal) {
         workflowBtn.addEventListener('click', () => {
-            setInstructionsTab('workflow');
-            openModal(instructionsModal);
+            markHowtoSeen();
+            openGuide('doc');
         });
     }
 
@@ -386,7 +509,7 @@ function setupEventListeners() {
     const instructionsContent = document.getElementById('instructionsContent');
     if (instructionsPrintBtn && instructionsModal) {
         instructionsPrintBtn.addEventListener('click', () => {
-            if (!instructionsModal.classList.contains('hidden')) {
+            if (isGuideVisible()) {
                 window.print();
             }
         });
@@ -480,17 +603,22 @@ function setupEventListeners() {
         });
     }
 
-    // Close modals with Escape key
+    // Close other modals with Escape. The how-to guide stays up; Escape only minimizes it.
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            [instructionsModal, changelogModal, roadmapModal, profileModal].forEach((modal) => {
-                if (modal && !modal.classList.contains('hidden')) {
-                    closeModal(modal);
-                }
-            });
-            if (videoPreviewModal && !videoPreviewModal.classList.contains('hidden')) {
-                closeVideoPreview();
+        if (e.key !== 'Escape') return;
+        let closedOther = false;
+        [changelogModal, roadmapModal, profileModal].forEach((modal) => {
+            if (modal && !modal.classList.contains('hidden')) {
+                closeModal(modal);
+                closedOther = true;
             }
+        });
+        if (videoPreviewModal && !videoPreviewModal.classList.contains('hidden')) {
+            closeVideoPreview();
+            closedOther = true;
+        }
+        if (!closedOther && isGuideExpanded()) {
+            dockGuide();
         }
     });
 
@@ -684,6 +812,7 @@ function showLogin() {
     loginScreen.style.display = 'block';
     dashboardScreen.classList.add('hidden');
     dashboardScreen.style.display = 'none';
+    dashboardAutoLoadStarted = false;
 }
 
 function showDashboard() {
@@ -696,12 +825,11 @@ function showDashboard() {
     loginScreen.style.display = 'none';
     dashboardScreen.classList.remove('hidden');
     dashboardScreen.style.display = 'block';
-    
-    // Only load videos if user is authenticated
+
     const user = auth.currentUser;
-    if (user) {
-        console.log('Loading videos for authenticated user');
-        loadAvailableVideos();
+    if (user && !dashboardAutoLoadStarted) {
+        dashboardAutoLoadStarted = true;
+        refreshDashboard().catch((e) => console.error('Auto-refresh failed:', e));
     }
 }
 

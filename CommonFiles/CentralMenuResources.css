@@ -1,12 +1,16 @@
+@import url("ViewportFit.css");
 @import url("PixelButtons.css");
+
+body {
+    background:
+        linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)),
+        url("Images/NewCentralMenuBackground.png") center / cover no-repeat fixed;
+}
 
 .citationsMain {
     /* font-family: Arial Rounded MT Black, sans-serif; */
     color: darkblue;
-    width: 90vw;
-	height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
-	max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
-	max-height: 89.7vh;
+    background-color: white;
     border-color: darkcyan;
     border-width: 2.5vmin;
     border-left-style: ridge;

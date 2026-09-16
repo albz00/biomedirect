@@ -31,7 +31,7 @@ var PAUSE_AT_YELLOW_MARKERS = PAUSE_AT_FREEZE_MARKERS;
  * previewing a chapter's end frame. Toggle with the flag below or the `?menuFromZero=1`
  * query param. Default OFF so production behavior is unchanged.
  */
-var TEMP_MENU_LINKS_PLAY_FROM_ZERO = true;
+var TEMP_MENU_LINKS_PLAY_FROM_ZERO = false;
 
 function menuLinksPlayFromZeroEnabled() {
     if (TEMP_MENU_LINKS_PLAY_FROM_ZERO === true) return true;
@@ -676,6 +676,51 @@ function isActionableInVideoClick(clickEvent) {
     // Click always has power: resume from a freeze, break a red loop, or (while playing a
     // segment) skip forward to the next freeze stop. No state should swallow the click.
     return true;
+}
+
+/**
+ * Route video interactions through one low-latency pointer path.
+ * The follow-up synthetic click is consumed so inline and runtime handlers cannot
+ * advance playback twice. Keyboard/programmatic clicks still invoke nextSlide().
+ */
+function bindInteractiveVideoInput() {
+    if (typeof document === "undefined" || typeof videoId === "undefined" || !videoId) return;
+    var animContainer = document.getElementById("animation");
+    var surface = animContainer || videoId;
+    if (surface.__interactivePointerBound) return;
+
+    var suppressClickUntil = 0;
+    var nowMs = function () {
+        return typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+    };
+    var consumeEvent = function (evt) {
+        if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
+        if (evt && typeof evt.stopImmediatePropagation === "function") evt.stopImmediatePropagation();
+        else if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
+    };
+
+    surface.addEventListener("pointerdown", function (evt) {
+        if (evt && evt.isPrimary === false) return;
+        if (evt && evt.pointerType === "mouse" && evt.button !== 0) return;
+        if (!isActionableInVideoClick(evt)) return;
+        suppressClickUntil = nowMs() + 750;
+        if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
+        nextSlide(evt);
+    }, true);
+
+    surface.addEventListener("click", function (evt) {
+        if (nowMs() <= suppressClickUntil) {
+            consumeEvent(evt);
+            return;
+        }
+        if (!isActionableInVideoClick(evt)) return;
+        consumeEvent(evt);
+        nextSlide(evt);
+    }, true);
+
+    surface.style.touchAction = "manipulation";
+    videoId.style.touchAction = "manipulation";
+    surface.__interactivePointerBound = true;
 }
 
 /**
@@ -2270,24 +2315,9 @@ function initializePlayer(videoUrl, timelineArray) {
 
     setGuidedPlaybackState("idle", "initialize");
 
-    // Runtime-owned click wiring so in-video clicks always reach nextSlide()
-    // even when a lesson template's inline onclick path is missing/broken.
-    if (!videoId.__interactiveClickBound) {
-        videoId.addEventListener("click", function(evt) {
-            if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
-            if (!isActionableInVideoClick(evt)) return;
-            nextSlide(evt);
-        });
-        videoId.__interactiveClickBound = true;
-    }
-    var animContainer = document.getElementById("animation");
-    if (animContainer && !animContainer.__interactiveClickBound) {
-        animContainer.addEventListener("click", function(evt) {
-            if (!isActionableInVideoClick(evt)) return;
-            nextSlide(evt);
-        });
-        animContainer.__interactiveClickBound = true;
-    }
+    // One global pointer-first route prevents duplicate inline/runtime clicks while
+    // preserving nextSlide() and the complete playback state machine unchanged.
+    bindInteractiveVideoInput();
     // Marker-aware Back button: teleport to the previous yellow/green anchor and resume play logic.
     if (CONTINUOUS_VIDEO_PLAYBACK) {
         var backBtn = document.getElementById("btnBack");
@@ -2995,6 +3025,9 @@ function nextSlide(clickEvt){ // FindMe1
     if (CONTINUOUS_VIDEO_PLAYBACK && videoId && !videoId.paused && isPlayingSegmentForward() &&
         (segmentTargetFreezeIdx < 0 || segmentTargetFreezeIdx >= freezeMarkers.length)) {
         beginPlayToNextFreezeFrame("click_rearm_missing_segment_target");
+        var targetRecovered = segmentTargetFreezeIdx >= 0 &&
+            segmentTargetFreezeIdx < freezeMarkers.length &&
+            isPlayingSegmentForward();
         logPlayerMarkerDebug({
             event: "click_branch",
             clickBranchTaken: "rearm_missing_segment_target",
@@ -3002,7 +3035,11 @@ function nextSlide(clickEvt){ // FindMe1
             clickAction: "rearm_missing_segment_target",
             clickIgnoredReason: "missing_segment_target",
             recoveryActionTaken: syncResult && syncResult.action ? syncResult.action : "click_rearm_missing_segment_target",
+            targetRecovered: targetRecovered,
         });
+        if (targetRecovered) {
+            advanceToNextMarkerEventOnClick("click_step_after_target_recovery", baseClickDebug.clickedElement);
+        }
         return;
     }
     if (isInLessonVideoClickContext()) {

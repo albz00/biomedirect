@@ -153,7 +153,7 @@
                     <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-arrow-path"/></svg>
                     <span class="btn-label">Load Lessons &amp; Videos</span>
                 </button>
-                <button id="uploadVideoBtn" class="btn btn-secondary" title="Upload one or more video files from your computer">
+                <button id="uploadVideoBtn" class="btn btn-secondary" title="Upload one or more MP4s. Files upload a few at a time, then each one is scanned automatically. A live ETA stays in the corner.">
                     <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-arrow-up-tray"/></svg>
                     <span class="btn-label">Upload Video</span>
                 </button>
@@ -520,10 +520,13 @@
                         <strong>Load Lessons &amp; Videos</strong> rebuilds the left-hand list from the current menu and your uploaded videos. It also refreshes the Available Videos section. This now runs automatically when you enter the dashboard. Click it again when you have uploaded new files, changed the menu, or the list looks stale. Lessons that still need a video are easy to spot in the tree (and with the Needs Video filter).
                     </p>
                     <p>
-                        <strong>Upload Video</strong> opens a file picker for one or more MP4 files from your computer. Uploading does not attach the file to a lesson by itself, except in one convenience case: if you upload a single file whose name matches a lesson, the panel will try to attach it. Otherwise you still pick the lesson and use Assign. Name a Without Text file so it ends in <code>_x</code> (for example <code>cleavage_stage_x.mp4</code>). That puts it in the Without Text group. Files that do not end in <code>_x</code> go with the With Text videos.
+                        <strong>Upload Video</strong> opens a file picker for one or more MP4 files from your computer. A batch of files is queued: a few upload at a time (not all at once), and each finished upload starts its own scan automatically. A corner panel shows per-file status and a live time estimate for the remaining uploads and scans. You do not need to click Scan Video for files in that batch.
                     </p>
                     <p>
-                        Progress and results appear as a small message in the bottom-right corner. Scanning a long video can take a while. Watch that message instead of clicking the same button over and over.
+                        Uploading does not attach the file to a lesson by itself, except when the file name matches a lesson (or you upload a single file with a lesson already selected). Otherwise you still pick the lesson and use Assign. Name a Without Text file so it ends in <code>_x</code> (for example <code>cleavage_stage_x.mp4</code>). That puts it in the Without Text group. Files that do not end in <code>_x</code> go with the With Text videos.
+                    </p>
+                    <p>
+                        Progress and results still appear as a small message in the bottom-right corner. For a multi-file upload, watch the Video ingest panel instead of clicking Upload Video again. Scanning a long video can take several minutes.
                     </p>
 
                     <h2 id="guide-sidebar">The left sidebar: finding and choosing a lesson</h2>
@@ -769,7 +772,7 @@
                             <span class="inst-step-num inst-step-num--3">3</span>
                             <div class="inst-step-body">
                                 <strong>Attach a video</strong>
-                                <p>Upload one if needed (Without Text filenames end in <code>_x</code>), or pick an uploaded file and click Assign.</p>
+                                <p>Upload one or many if needed (Without Text filenames end in <code>_x</code>). A corner panel tracks upload + scan. Or pick an uploaded file and click Assign.</p>
                             </div>
                         </li>
                         <li>
@@ -863,6 +866,9 @@
             <div class="modal-body changelog-body">
                 <h3>Recent Changes</h3>
                 <ul class="changelog-list">
+                    <li>
+                        <strong>Bulk video ingest queue</strong> – Upload Video now queues a batch of MP4s, uploads a few at a time, and lets each file’s scan run on its own with a live per-file status and ETA. Detection is capped so a large drop does not spin up dozens of heavy jobs at once.
+                    </li>
                     <li>
                         <strong>Admin panel created</strong> – Centralized dashboard for scanning lessons, assigning videos, and managing metadata.
                     </li>
@@ -1017,6 +1023,30 @@
             <p class="admin-save-dock-title">Save your changes?</p>
             <p id="adminSaveDockSummary" class="admin-save-dock-summary">Edits are not live for students until you save.</p>
             <button type="button" id="adminSaveDockBtn" class="btn btn-primary btn-sm">Save</button>
+        </div>
+        <div id="ingestQueuePanel" class="ingest-queue-panel" hidden>
+            <div class="ingest-queue-header">
+                <p class="ingest-queue-title">Video ingest</p>
+                <div class="ingest-queue-header-actions">
+                    <button type="button" id="ingestQueueMinimizeBtn" class="ingest-queue-icon-btn" title="Minimize" aria-label="Minimize ingest panel">–</button>
+                    <button type="button" id="ingestQueueCloseBtn" class="ingest-queue-icon-btn" title="Hide" aria-label="Hide ingest panel">&times;</button>
+                </div>
+            </div>
+            <p id="ingestQueueHeadline" class="ingest-queue-headline">Waiting…</p>
+            <div class="ingest-queue-body">
+                <div class="ingest-queue-metric">
+                    <span class="ingest-queue-metric-label">Upload</span>
+                    <span id="ingestQueueUploadLabel" class="ingest-queue-metric-value">0%</span>
+                </div>
+                <div class="ingest-queue-bar" aria-hidden="true"><div id="ingestQueueUploadBar" class="ingest-queue-bar-fill ingest-queue-bar-fill--upload"></div></div>
+                <div class="ingest-queue-metric">
+                    <span class="ingest-queue-metric-label">Scan</span>
+                    <span id="ingestQueueDetectLabel" class="ingest-queue-metric-value">0 / 0</span>
+                </div>
+                <div class="ingest-queue-bar" aria-hidden="true"><div id="ingestQueueDetectBar" class="ingest-queue-bar-fill ingest-queue-bar-fill--detect"></div></div>
+                <p id="ingestQueueEta" class="ingest-queue-eta" aria-live="polite">Estimating time…</p>
+                <ul id="ingestQueueList" class="ingest-queue-list"></ul>
+            </div>
         </div>
         <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
     </div>

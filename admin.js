@@ -655,57 +655,22 @@ function setupEventListeners() {
         });
 
         uploadVideoInput.addEventListener('change', async (e) => {
-            const files = Array.from(e.target.files || []).filter(f => f.type === 'video/mp4');
+            const files = Array.from(e.target.files || []).filter(f => f.type === 'video/mp4' || /\.mp4$/i.test(f.name || ''));
+            uploadVideoInput.value = '';
             if (!files.length) {
                 return;
             }
-
-            try {
-                requireAuth();
-            } catch {
-                setStatus('You need to be logged in', 'error');
-                return;
-            }
-
-            uploadVideoBtn.disabled = true;
-            setStatus(`Uploading ${files.length} video${files.length > 1 ? 's' : ''}...`, 'scanning');
-
-            try {
-                for (const file of files) {
-                    // No-Text uploads (basename ends with _x) go to videos/x/; everything else to videos/.
-                    const baseName = file.name.replace(/\.mp4$/i, '');
-                    const folder = videoFolderForLessonId(baseName);
-                    const fileRef = storage.ref().child(folder ? `videos/${folder}/${file.name}` : `videos/${file.name}`);
-                    const metadata = (files.length === 1 && selectedLessonId)
-                        ? { customMetadata: { lessonId: selectedLessonId } }
-                        : undefined;
-                    await fileRef.put(file, metadata);
-                }
-
-                setStatus('Upload finished. Refreshing the list…', 'success');
-                await loadAvailableVideos();
-                // If a single file was uploaded and its name matches a lessonId, assign it so the lesson uses this video
-                if (files.length === 1) {
-                    const baseName = files[0].name.replace(/\.mp4$/i, '');
-                    // baseName is the variant-specific lessonId (e.g. cleavage_stage_x). Match either variant.
-                    const lesson = lessonsData.find(l =>
-                        l.lessonId === baseName ||
-                        (l.variants && (l.variants.t.lessonId === baseName || l.variants.x.lessonId === baseName)));
-                    if (lesson) {
-                        const videoPath = defaultVideoPathForLessonId(baseName);
-                        await db.collection('videoPaths').doc(baseName).set({ videoPath }, { merge: true });
-                    }
-                }
-                await refreshDashboard();
-            } catch (error) {
-                console.error('Error uploading videos:', error);
-                setStatus('Error uploading videos: ' + error.message, 'error');
-            } finally {
-                uploadVideoBtn.disabled = false;
-                uploadVideoInput.value = '';
-                setTimeout(() => setStatus('Ready'), 3000);
-            }
+            await startIngestQueue(files);
         });
+    }
+
+    const ingestQueueMinimizeBtn = document.getElementById('ingestQueueMinimizeBtn');
+    const ingestQueueCloseBtn = document.getElementById('ingestQueueCloseBtn');
+    if (ingestQueueMinimizeBtn) {
+        ingestQueueMinimizeBtn.addEventListener('click', () => toggleIngestQueueMinimized());
+    }
+    if (ingestQueueCloseBtn) {
+        ingestQueueCloseBtn.addEventListener('click', () => hideIngestQueuePanel());
     }
 
     // Search Input
@@ -815,6 +780,7 @@ function showLogin() {
     dashboardScreen.classList.add('hidden');
     dashboardScreen.style.display = 'none';
     dashboardAutoLoadStarted = false;
+    stopIngestWatchers();
 }
 
 function showDashboard() {
@@ -1529,6 +1495,447 @@ function videoFolderForLessonId(lessonId) {
 function defaultVideoPathForLessonId(lessonId) {
     const folder = videoFolderForLessonId(lessonId);
     return folder ? `videos/${folder}/${lessonId}.mp4` : `videos/${lessonId}.mp4`;
+}
+
+const INGEST_UPLOAD_CONCURRENCY = 3;
+const INGEST_DETECT_MAX_INSTANCES = 6;
+const INGEST_FALLBACK_DETECTION_MS = 120000;
+const INGEST_STATUS_LABELS = {
+    queued: 'Waiting',
+    uploading: 'Uploading',
+    uploaded: 'Waiting for scan',
+    detecting: 'Scanning',
+    ok: 'Done',
+    failed: 'Failed',
+    no_yellow: 'No markers',
+};
+
+let ingestUnsubs = [];
+let ingestRenderTimer = null;
+let ingestLocalBytes = Object.create(null);
+let ingestUploadBps = 0;
+let ingestUploadMarkMs = 0;
+let ingestUploadBytesAtMark = 0;
+let ingestCurrentBatchId = null;
+let ingestUploading = false;
+
+function findLessonIdForUploadFileName(fileName) {
+    const baseName = String(fileName || '').replace(/\.mp4$/i, '');
+    if (!baseName) return null;
+    const lesson = (lessonsData || []).find((l) =>
+        l.lessonId === baseName ||
+        (l.variants && (
+            (l.variants.t && l.variants.t.lessonId === baseName) ||
+            (l.variants.x && l.variants.x.lessonId === baseName)
+        )));
+    return lesson ? baseName : null;
+}
+
+function stopIngestWatchers() {
+    ingestUnsubs.forEach((unsub) => {
+        try { unsub(); } catch (e) { /* ignore */ }
+    });
+    ingestUnsubs = [];
+    if (ingestRenderTimer) {
+        clearInterval(ingestRenderTimer);
+        ingestRenderTimer = null;
+    }
+}
+
+function formatIngestDuration(ms) {
+    if (!Number.isFinite(ms) || ms < 0) return '—';
+    const totalSec = Math.round(ms / 1000);
+    if (totalSec < 15) return 'under 15s';
+    if (totalSec < 60) return `about ${totalSec}s`;
+    const minutes = Math.floor(totalSec / 60);
+    const seconds = totalSec % 60;
+    if (minutes < 60) return seconds ? `about ${minutes}m ${seconds}s` : `about ${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const restMin = minutes % 60;
+    return restMin ? `about ${hours}h ${restMin}m` : `about ${hours}h`;
+}
+
+function formatIngestBytes(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    if (n < 1024 * 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(n / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function rememberedDetectionMs() {
+    try {
+        const stored = Number(localStorage.getItem('ingestAvgDetectionMs'));
+        if (Number.isFinite(stored) && stored > 0) return stored;
+    } catch (e) { /* ignore */ }
+    return INGEST_FALLBACK_DETECTION_MS;
+}
+
+function rememberDetectionMs(avgMs) {
+    const n = Number(avgMs);
+    if (!Number.isFinite(n) || n <= 0) return;
+    try { localStorage.setItem('ingestAvgDetectionMs', String(Math.round(n))); } catch (e) { /* ignore */ }
+}
+
+async function runWithConcurrency(items, limit, worker) {
+    let index = 0;
+    const workers = Math.max(1, Math.min(limit, items.length));
+    async function next() {
+        while (index < items.length) {
+            const i = index++;
+            await worker(items[i], i);
+        }
+    }
+    await Promise.all(Array.from({ length: workers }, () => next()));
+}
+
+function showIngestQueuePanel() {
+    const panel = document.getElementById('ingestQueuePanel');
+    if (!panel) return;
+    panel.hidden = false;
+    panel.classList.remove('is-minimized');
+}
+
+function hideIngestQueuePanel() {
+    const panel = document.getElementById('ingestQueuePanel');
+    if (!panel) return;
+    if (ingestUploading || !panel.classList.contains('is-done')) {
+        panel.classList.add('is-minimized');
+        return;
+    }
+    panel.hidden = true;
+    stopIngestWatchers();
+}
+
+function toggleIngestQueueMinimized() {
+    const panel = document.getElementById('ingestQueuePanel');
+    if (!panel || panel.hidden) return;
+    panel.classList.toggle('is-minimized');
+}
+
+function noteIngestUploadProgress(totalUploadedBytes) {
+    const now = Date.now();
+    if (!ingestUploadMarkMs) {
+        ingestUploadMarkMs = now;
+        ingestUploadBytesAtMark = totalUploadedBytes;
+        return;
+    }
+    const dt = (now - ingestUploadMarkMs) / 1000;
+    if (dt < 0.4) return;
+    const inst = (totalUploadedBytes - ingestUploadBytesAtMark) / dt;
+    ingestUploadBps = ingestUploadBps > 0 ? (ingestUploadBps * 0.7 + inst * 0.3) : inst;
+    ingestUploadMarkMs = now;
+    ingestUploadBytesAtMark = totalUploadedBytes;
+}
+
+function renderIngestQueueFromJobs(jobs, batchData) {
+    const panel = document.getElementById('ingestQueuePanel');
+    if (!panel || panel.hidden && !jobs.length) return;
+
+    const list = Array.isArray(jobs) ? jobs.slice() : [];
+    const totalFiles = list.length || Number(batchData && batchData.totalFiles) || 0;
+    const totalBytes = list.reduce((sum, job) => sum + (Number(job.bytes) || 0), 0) || Number(batchData && batchData.totalBytes) || 0;
+    let uploadedBytes = 0;
+    const counts = {
+        queued: 0,
+        uploading: 0,
+        uploaded: 0,
+        detecting: 0,
+        ok: 0,
+        failed: 0,
+        no_yellow: 0,
+    };
+    list.forEach((job) => {
+        const status = job.status || 'queued';
+        if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status]++;
+        else counts.failed++;
+        const localBytes = Number(ingestLocalBytes[job.id]) || 0;
+        if (status === 'queued') return;
+        if (status === 'uploading') uploadedBytes += Math.min(Number(job.bytes) || 0, localBytes);
+        else uploadedBytes += Number(job.bytes) || 0;
+    });
+
+    const doneCount = counts.ok + counts.failed + counts.no_yellow;
+    const uploadPct = totalBytes ? Math.max(0, Math.min(100, Math.round((uploadedBytes / totalBytes) * 100))) : (ingestUploading ? 0 : 100);
+    const detectPct = totalFiles ? Math.max(0, Math.min(100, Math.round((doneCount / totalFiles) * 100))) : 0;
+    const remainingUploadBytes = Math.max(0, totalBytes - uploadedBytes);
+    const remainingDetect = Math.max(0, totalFiles - doneCount);
+    const avgDetectMs = Number(batchData && batchData.avgDetectionMs) || rememberedDetectionMs();
+    rememberDetectionMs(batchData && batchData.avgDetectionMs);
+
+    let etaMs = 0;
+    if (remainingUploadBytes > 0) {
+        const bps = ingestUploadBps > 64 ? ingestUploadBps : (2 * 1024 * 1024);
+        etaMs += (remainingUploadBytes / bps) * 1000;
+    }
+    if (remainingDetect > 0) {
+        const conc = Math.max(1, Math.min(INGEST_DETECT_MAX_INSTANCES, remainingDetect));
+        etaMs += (remainingDetect * avgDetectMs) / conc;
+    }
+
+    const allDone = totalFiles > 0 && doneCount >= totalFiles && !ingestUploading;
+    const hasErrors = counts.failed > 0;
+    panel.classList.toggle('is-done', allDone);
+    panel.classList.toggle('has-errors', hasErrors);
+
+    const headline = document.getElementById('ingestQueueHeadline');
+    if (headline) {
+        if (allDone && hasErrors) headline.textContent = `Finished with ${counts.failed} error${counts.failed === 1 ? '' : 's'}.`;
+        else if (allDone) headline.textContent = `Finished ${totalFiles} video${totalFiles === 1 ? '' : 's'}.`;
+        else if (ingestUploading) headline.textContent = `Uploading ${Math.max(counts.uploading, 1)} of ${totalFiles}, then scanning automatically.`;
+        else if (counts.detecting > 0) headline.textContent = `Scanning ${counts.detecting} now · ${doneCount} of ${totalFiles} finished.`;
+        else headline.textContent = `Waiting for scan to start · ${doneCount} of ${totalFiles} finished.`;
+    }
+
+    const uploadLabel = document.getElementById('ingestQueueUploadLabel');
+    if (uploadLabel) uploadLabel.textContent = `${uploadPct}% · ${formatIngestBytes(uploadedBytes)} / ${formatIngestBytes(totalBytes)}`;
+    const detectLabel = document.getElementById('ingestQueueDetectLabel');
+    if (detectLabel) detectLabel.textContent = `${doneCount} / ${totalFiles}`;
+    const uploadBar = document.getElementById('ingestQueueUploadBar');
+    if (uploadBar) uploadBar.style.width = `${uploadPct}%`;
+    const detectBar = document.getElementById('ingestQueueDetectBar');
+    if (detectBar) detectBar.style.width = `${detectPct}%`;
+    const etaEl = document.getElementById('ingestQueueEta');
+    if (etaEl) {
+        if (allDone) etaEl.textContent = hasErrors ? 'Some files need a retry.' : 'All files finished.';
+        else etaEl.textContent = `${formatIngestDuration(etaMs)} remaining`;
+    }
+
+    const listEl = document.getElementById('ingestQueueList');
+    if (listEl) {
+        listEl.innerHTML = list.map((job) => {
+            const status = job.status || 'queued';
+            const label = INGEST_STATUS_LABELS[status] || status;
+            const stateClass = status === 'ok' ? 'is-ok' : (status === 'failed' ? 'is-failed' : (status === 'uploading' || status === 'detecting' ? 'is-active' : ''));
+            const err = job.error ? `<div class="ingest-queue-item-error">${escapeHtmlAdmin(String(job.error))}</div>` : '';
+            return `<li class="ingest-queue-item ${stateClass}"><span class="ingest-queue-item-name" title="${escapeHtmlAdmin(job.fileName || '')}">${escapeHtmlAdmin(job.fileName || job.id)}</span><span class="ingest-queue-item-status">${escapeHtmlAdmin(label)}</span>${err}</li>`;
+        }).join('');
+    }
+}
+
+function listenToIngestBatch(batchId) {
+    stopIngestWatchers();
+    ingestCurrentBatchId = batchId;
+    let jobs = [];
+    let batchData = {};
+    const redraw = () => renderIngestQueueFromJobs(jobs, batchData);
+    ingestUnsubs.push(db.collection('ingestBatches').doc(batchId).onSnapshot((snap) => {
+        batchData = snap.exists ? (snap.data() || {}) : {};
+        redraw();
+    }, (err) => console.warn('ingest batch watch failed', err)));
+    ingestUnsubs.push(db.collection('ingestJobs').where('batchId', '==', batchId).onSnapshot((snap) => {
+        jobs = snap.docs.map((doc) => ({ id: doc.id, ...(doc.data() || {}) }));
+        jobs.sort((a, b) => String(a.fileName || '').localeCompare(String(b.fileName || '')));
+        redraw();
+    }, (err) => console.warn('ingest jobs watch failed', err)));
+    ingestRenderTimer = setInterval(redraw, 800);
+}
+
+async function markIngestJobUploaded(jobRef) {
+    await db.runTransaction(async (tx) => {
+        const snap = await tx.get(jobRef);
+        const status = snap.exists ? String((snap.data() || {}).status || '') : '';
+        const patch = {
+            uploadComplete: true,
+            uploadedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        };
+        if (!status || status === 'queued' || status === 'uploading') {
+            patch.status = 'uploaded';
+        }
+        tx.set(jobRef, patch, { merge: true });
+    });
+}
+
+async function refreshIngestBatchCountsClient(batchId) {
+    if (!batchId) return;
+    const snap = await db.collection('ingestJobs').where('batchId', '==', String(batchId)).get();
+    const counts = {
+        queued: 0,
+        uploading: 0,
+        uploaded: 0,
+        detecting: 0,
+        ok: 0,
+        failed: 0,
+        no_yellow: 0,
+    };
+    let uploadedBytes = 0;
+    let totalBytes = 0;
+    let detectionMsSum = 0;
+    let detectionSamples = 0;
+    snap.forEach((doc) => {
+        const data = doc.data() || {};
+        const status = data.status || 'queued';
+        if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status]++;
+        else counts.failed++;
+        const bytes = Number(data.bytes) || 0;
+        totalBytes += bytes;
+        if (status !== 'queued' && status !== 'uploading') uploadedBytes += bytes;
+        const detectionMs = Number(data.detectionMs);
+        if (Number.isFinite(detectionMs) && detectionMs > 0) {
+            detectionMsSum += detectionMs;
+            detectionSamples++;
+        }
+    });
+    const total = snap.size;
+    const done = counts.ok + counts.failed + counts.no_yellow;
+    let status = 'uploading';
+    if (total > 0 && done >= total) status = counts.failed ? 'done_with_errors' : 'done';
+    else if (counts.detecting > 0 || counts.uploaded > 0) status = 'detecting';
+    const patch = {
+        counts,
+        uploadedBytes,
+        totalBytes,
+        doneCount: done,
+        totalFiles: total,
+        avgDetectionMs: detectionSamples ? Math.round(detectionMsSum / detectionSamples) : null,
+        status,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    if (total > 0 && done >= total) {
+        patch.finishedAt = firebase.firestore.FieldValue.serverTimestamp();
+    }
+    await db.collection('ingestBatches').doc(String(batchId)).set(patch, { merge: true });
+}
+
+async function startIngestQueue(files) {
+    try {
+        requireAuth();
+    } catch {
+        setStatus('You need to be logged in', 'error');
+        return;
+    }
+    if (!files.length) return;
+    if (ingestUploading) {
+        setStatus('Wait for the current upload batch to finish before starting another.', 'error');
+        return;
+    }
+
+    ingestUploading = true;
+    ingestLocalBytes = Object.create(null);
+    ingestUploadBps = 0;
+    ingestUploadMarkMs = 0;
+    ingestUploadBytesAtMark = 0;
+    if (uploadVideoBtn) uploadVideoBtn.disabled = true;
+    showIngestQueuePanel();
+    setStatus(`Queuing ${files.length} video${files.length > 1 ? 's' : ''}…`, 'scanning');
+
+    const user = auth.currentUser;
+    const batchRef = db.collection('ingestBatches').doc();
+    const batchId = batchRef.id;
+    const jobs = [];
+
+    try {
+        for (const file of files) {
+            const jobRef = db.collection('ingestJobs').doc();
+            const baseName = file.name.replace(/\.mp4$/i, '');
+            const matchedLessonId = findLessonIdForUploadFileName(file.name);
+            const lessonId = (files.length === 1 && selectedLessonId) ? selectedLessonId : matchedLessonId;
+            const folder = videoFolderForLessonId(baseName);
+            const videoPath = folder ? `videos/${folder}/${file.name}` : `videos/${file.name}`;
+            jobs.push({
+                ref: jobRef,
+                id: jobRef.id,
+                file,
+                fileName: file.name,
+                bytes: file.size,
+                lessonId,
+                videoPath,
+            });
+            await jobRef.set({
+                batchId,
+                fileName: file.name,
+                videoPath,
+                lessonId: lessonId || null,
+                bytes: file.size,
+                status: 'queued',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdBy: user ? user.uid : null,
+            });
+        }
+
+        await batchRef.set({
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            createdBy: user ? user.uid : null,
+            status: 'uploading',
+            totalFiles: files.length,
+            totalBytes: files.reduce((sum, file) => sum + (file.size || 0), 0),
+            uploadedBytes: 0,
+            doneCount: 0,
+            counts: {
+                queued: files.length,
+                uploading: 0,
+                uploaded: 0,
+                detecting: 0,
+                ok: 0,
+                failed: 0,
+                no_yellow: 0,
+            },
+        });
+
+        listenToIngestBatch(batchId);
+        setStatus(`Uploading ${files.length} video${files.length > 1 ? 's' : ''}…`, 'scanning');
+
+        await runWithConcurrency(jobs, INGEST_UPLOAD_CONCURRENCY, async (job) => {
+            try {
+                await job.ref.set({
+                    status: 'uploading',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                }, { merge: true });
+                const fileRef = storage.ref().child(job.videoPath);
+                const customMetadata = {
+                    ingestJobId: job.id,
+                    ingestBatchId: batchId,
+                };
+                if (job.lessonId) customMetadata.lessonId = job.lessonId;
+                const task = fileRef.put(job.file, {
+                    contentType: job.file.type || 'video/mp4',
+                    customMetadata,
+                });
+                await new Promise((resolve, reject) => {
+                    task.on('state_changed', (snap) => {
+                        ingestLocalBytes[job.id] = snap.bytesTransferred || 0;
+                        const totalLocal = jobs.reduce((sum, item) => {
+                            if (ingestLocalBytes[item.id] != null) return sum + ingestLocalBytes[item.id];
+                            return sum;
+                        }, 0);
+                        noteIngestUploadProgress(totalLocal);
+                    }, reject, resolve);
+                });
+                if (job.lessonId) {
+                    await db.collection('videoPaths').doc(job.lessonId).set({ videoPath: job.videoPath }, { merge: true });
+                }
+                await markIngestJobUploaded(job.ref);
+            } catch (err) {
+                console.error('Ingest upload failed', job.fileName, err);
+                await job.ref.set({
+                    status: 'failed',
+                    error: (err && err.message) || String(err),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                }, { merge: true });
+            }
+        });
+
+        await refreshIngestBatchCountsClient(batchId);
+        setStatus('Uploads finished. Scanning in the background…', 'success');
+        await loadAvailableVideos();
+        await refreshDashboard();
+        setTimeout(() => setStatus('Ready'), 4000);
+    } catch (error) {
+        console.error('Error uploading videos:', error);
+        setStatus('Error uploading videos: ' + error.message, 'error');
+        try {
+            await batchRef.set({
+                status: 'failed',
+                error: error.message || String(error),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            }, { merge: true });
+        } catch (e) { /* ignore */ }
+    } finally {
+        ingestUploading = false;
+        if (uploadVideoBtn) uploadVideoBtn.disabled = false;
+    }
 }
 
 /** Map a canonical TextT lesson page path to the requested variant ('t' | 'x').

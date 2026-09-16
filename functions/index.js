@@ -10,7 +10,8 @@ const { Storage } = require("@google-cloud/storage");
  *   - Green detector runs in parallel as separate freeze/menu-anchor pipeline.
  *   - Red detector runs in parallel; red cards define loops (runtime returns to the previous freeze
  *     marker's content and replays until the user clicks). Persisted as redStopMarkers/redScreenRanges.
- *   generateSrcArray              Storage trigger, videos/*.mp4 upload; lessonId from metadata/videoPaths
+ *   generateSrcArray              Storage trigger, videos/*.mp4 upload; lessonId from metadata/videoPaths;
+ *                                 capped at 6 instances; patches ingestJobs/ingestBatches for the admin queue
  *   generateSrcArrayWithYellowOptions  HTTPS — admin "Generate source" (minDurationSeconds only)
  *   detectYellowScreen            HTTPS — "Regenerate from yellow" in admin (same pipeline)
  *   generateSrcArrayFromYellowScreens  HTTPS — passes chapters[] from menu HTML labels
@@ -279,10 +280,93 @@ async function resolveLessonIdForUploadedVideo({ filePath, objectMetadata }) {
   return null;
 }
 
+async function patchIngestJob(jobId, patch) {
+  if (!jobId) return;
+  try {
+    await db.collection("ingestJobs").doc(String(jobId)).set(
+      {
+        ...patch,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    console.warn("[ingestJob] patch failed", jobId, err && err.message);
+  }
+}
+
+async function finishIngestJob({ jobId, batchId, startedMs, status, extra }) {
+  if (!jobId) return;
+  const detectionMs = startedMs ? Date.now() - startedMs : null;
+  await patchIngestJob(jobId, {
+    status,
+    detectionMs,
+    detectionFinishedAt: admin.firestore.FieldValue.serverTimestamp(),
+    ...(extra || {}),
+  });
+  await refreshIngestBatchCounts(batchId);
+}
+
+async function refreshIngestBatchCounts(batchId) {
+  if (!batchId) return;
+  try {
+    const snap = await db.collection("ingestJobs").where("batchId", "==", String(batchId)).get();
+    const counts = {
+      queued: 0,
+      uploading: 0,
+      uploaded: 0,
+      detecting: 0,
+      ok: 0,
+      failed: 0,
+      no_yellow: 0,
+    };
+    let uploadedBytes = 0;
+    let totalBytes = 0;
+    let detectionMsSum = 0;
+    let detectionSamples = 0;
+    snap.forEach((doc) => {
+      const data = doc.data() || {};
+      const status = data.status || "queued";
+      if (Object.prototype.hasOwnProperty.call(counts, status)) counts[status]++;
+      else counts.failed++;
+      const bytes = Number(data.bytes) || 0;
+      totalBytes += bytes;
+      if (status !== "queued" && status !== "uploading") uploadedBytes += bytes;
+      const detectionMs = Number(data.detectionMs);
+      if (Number.isFinite(detectionMs) && detectionMs > 0) {
+        detectionMsSum += detectionMs;
+        detectionSamples++;
+      }
+    });
+    const total = snap.size;
+    const done = counts.ok + counts.failed + counts.no_yellow;
+    let status = "uploading";
+    if (total > 0 && done >= total) status = counts.failed ? "done_with_errors" : "done";
+    else if (counts.detecting > 0 || counts.uploaded > 0) status = "detecting";
+    const patch = {
+      counts,
+      uploadedBytes,
+      totalBytes,
+      doneCount: done,
+      totalFiles: total,
+      avgDetectionMs: detectionSamples ? Math.round(detectionMsSum / detectionSamples) : null,
+      status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+    if (total > 0 && done >= total) {
+      patch.finishedAt = admin.firestore.FieldValue.serverTimestamp();
+    }
+    await db.collection("ingestBatches").doc(String(batchId)).set(patch, { merge: true });
+  } catch (err) {
+    console.warn("[ingestBatch] refresh failed", batchId, err && err.message);
+  }
+}
+
 exports.generateSrcArray = onObjectFinalized(
   {
     memory: "2GiB",
     timeoutSeconds: 540,
+    maxInstances: 6,
   },
   async (event) => {
     const object = event.data;
@@ -305,13 +389,26 @@ exports.generateSrcArray = onObjectFinalized(
       return;
     }
 
-    const uploadedVideoId = path.basename(filePath, ".mp4");
+    const uploadedVideoId = path.basename(filePath, path.extname(filePath || ""));
     const bucket = storage.bucket(bucketName);
     const tmpFile = path.join(os.tmpdir(), `upload_${Date.now()}_${path.basename(filePath)}`);
     let stage = "init";
     let lessonId = null;
+    const objectMetadata = object.metadata || object.customMetadata || {};
+    const ingestJobId = objectMetadata.ingestJobId ? String(objectMetadata.ingestJobId).trim() : "";
+    const ingestBatchId = objectMetadata.ingestBatchId ? String(objectMetadata.ingestBatchId).trim() : "";
+    const detectionStartedMs = Date.now();
 
     try {
+      if (ingestJobId) {
+        await patchIngestJob(ingestJobId, {
+          status: "detecting",
+          videoPath: filePath,
+          detectionStartedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+        await refreshIngestBatchCounts(ingestBatchId);
+      }
+
       stage = "download";
       console.log("Downloading uploaded lesson video:", filePath);
       await bucket.file(filePath).download({ destination: tmpFile });
@@ -320,8 +417,11 @@ exports.generateSrcArray = onObjectFinalized(
       // Resolve which lesson this video belongs to (from custom metadata or videoPaths mapping)
       lessonId = await resolveLessonIdForUploadedVideo({
         filePath,
-        objectMetadata: object.metadata || {},
+        objectMetadata,
       });
+      if (ingestJobId && lessonId) {
+        await patchIngestJob(ingestJobId, { lessonId, videoPath: filePath });
+      }
 
       stage = "load_chapters";
       const chapterTitles = lessonId ? await loadOrderedChapterTitles(lessonId) : [];
@@ -356,6 +456,13 @@ exports.generateSrcArray = onObjectFinalized(
             { merge: true }
           );
         }
+        await finishIngestJob({
+          jobId: ingestJobId,
+          batchId: ingestBatchId,
+          startedMs: detectionStartedMs,
+          status: "no_yellow",
+          extra: { lessonId: lessonId || null, videoPath: filePath },
+        });
         return;
       }
 
@@ -431,9 +538,20 @@ exports.generateSrcArray = onObjectFinalized(
               updatedAt: admin.firestore.FieldValue.serverTimestamp(),
             },
           },
-          { merge: true }
-        );
+            { merge: true }
+          );
       }
+      await finishIngestJob({
+        jobId: ingestJobId,
+        batchId: ingestBatchId,
+        startedMs: detectionStartedMs,
+        status: "ok",
+        extra: {
+          lessonId: lessonId || null,
+          videoPath: filePath,
+          segmentCount: Array.isArray(srcArray) ? srcArray.length : 0,
+        },
+      });
     } catch (error) {
       console.error(`generateSrcArray failed at stage=${stage}:`, error && error.stack ? error.stack : error);
       // Best‑effort error marker; do not rethrow so the upload itself still succeeds.
@@ -455,6 +573,18 @@ exports.generateSrcArray = onObjectFinalized(
         },
         { merge: true }
       );
+      await finishIngestJob({
+        jobId: ingestJobId,
+        batchId: ingestBatchId,
+        startedMs: detectionStartedMs,
+        status: "failed",
+        extra: {
+          lessonId: lessonId || null,
+          videoPath: filePath,
+          lastErrorStage: stage,
+          error: (error && error.message) || String(error),
+        },
+      });
     } finally {
       if (fs.existsSync(tmpFile)) fs.unlinkSync(tmpFile);
     }

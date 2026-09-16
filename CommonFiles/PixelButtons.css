@@ -21,12 +21,12 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    /* Vertical padding must clear the recessed inner face (inset 0.7vmin + its
-       0.22vmin border) so the label never crosses the inner bevel lines on
+    /* Vertical padding must clear the recessed inner face (inset 0.42vmin + its
+       0.1vmin border) so the label never crosses the inner bevel lines on
        auto-height buttons. Fixed-height buttons centre their text, so the extra
        padding is harmless there. */
-    padding: 1.05vmin 2.2vmin;
-    border: 0.3vmin solid #050505;
+    padding: 0.72vmin 1.25vmin;
+    border: 0.12vmin solid #050505;
     border-radius: 0;
     background: #7c8486;
     color: #141414;
@@ -35,29 +35,30 @@
     -webkit-user-select: none;
     user-select: none;
     font-family: Arial, Helvetica, sans-serif;
-    /* Outer chrome bevel + hard pixel drop shadow */
+    /* Darker outer chrome, matching the original metallic frame. */
     box-shadow:
-        inset 0.3vmin 0.3vmin 0 #dde3e3,
-        inset -0.3vmin -0.3vmin 0 #2f3535,
-        0.5vmin 0.5vmin 0 #000;
+        inset 0.14vmin 0.14vmin 0 #dde3e3,
+        inset -0.14vmin -0.14vmin 0 #444b4b,
+        0.22vmin 0.22vmin 0 #000;
     transition:
-        transform 80ms linear,
-        box-shadow 80ms linear,
-        filter 120ms ease;
+        transform 160ms ease,
+        box-shadow 160ms ease,
+        filter 160ms ease;
 }
 
-/* Recessed inner face — the crisp "line work" */
+/* Recessed inner face — lighter panel with a light-to-dark wash */
 .pixelBtn::after {
     content: "";
     position: absolute;
-    inset: 0.7vmin;
-    background: linear-gradient(180deg, #e9eced 0%, #c8cece 100%);
-    border: 0.22vmin solid #161616;
+    inset: 0.42vmin;
+    background: linear-gradient(180deg, #f8f9f9 0%, #d4d9d9 46%, #8e9595 100%);
+    border: 0.1vmin solid #161616;
     box-shadow:
-        inset 0.18vmin 0.18vmin 0 #ffffff,
-        inset -0.18vmin -0.18vmin 0 #8a9090;
+        inset 0.1vmin 0.1vmin 0 #ffffff,
+        inset -0.1vmin -0.1vmin 0 #6e7474;
     z-index: 0;
     pointer-events: none;
+    transition: background 160ms ease, box-shadow 160ms ease;
 }
 
 /* Label sits above the inner face */
@@ -71,27 +72,36 @@
     font-weight: 900;
     letter-spacing: -0.01em;
     line-height: 1.05;
-    font-size: 2vmin;
-    text-shadow: 0.12vmin 0.12vmin 0 rgba(255, 255, 255, 0.9);
+    font-size: 2.15vmin;
 }
 
 .pixelBtn:hover {
-    filter: brightness(1.07);
+    transform: translateY(-0.16vmin);
+    filter: brightness(1.08);
+    box-shadow:
+        inset 0.14vmin 0.14vmin 0 #f3f5f5,
+        inset -0.14vmin -0.14vmin 0 #444b4b,
+        0.22vmin 0.34vmin 0 #000;
+}
+
+.pixelBtn:hover::after {
+    background: linear-gradient(180deg, #ffffff 0%, #dce1e1 46%, #9aa1a1 100%);
 }
 
 /* Tactile press: button sinks into its own shadow and the bevel flips */
 .pixelBtn:active,
 .pixelBtn.is-clicked {
-    transform: translate(0.4vmin, 0.4vmin);
+    transform: translate(0.18vmin, 0.18vmin);
+    filter: none;
     box-shadow:
-        inset 0.3vmin 0.3vmin 0 #2f3535,
-        inset -0.3vmin -0.3vmin 0 #dde3e3,
-        0.15vmin 0.15vmin 0 #000;
+        inset 0.14vmin 0.14vmin 0 #444b4b,
+        inset -0.14vmin -0.14vmin 0 #dde3e3,
+        0.07vmin 0.07vmin 0 #000;
 }
 
 .pixelBtn:focus-visible {
-    outline: 0.3vmin solid #02E8E5;
-    outline-offset: 0.3vmin;
+    outline: 0.14vmin solid #02E8E5;
+    outline-offset: 0.2vmin;
 }
 
 /* ---------------------------------------------------------------
@@ -102,14 +112,92 @@
 .btnHeader.pixelBtn > .label,
 .btnFooter.pixelBtn > .label,
 .btnRate.pixelBtn > .label {
-    font-size: 1.9vmin;
+    font-size: 2.35vmin;
 }
 
 /* Header bank reads as a tight, dense row (matching the original button bank):
    trim the horizontal padding so each button hugs its label. Vertical padding
    stays minimal because the fixed-height buttons centre their text. */
 .btnHeader.pixelBtn {
-    padding: 0.3vmin 1.3vmin;
+    padding: 0.25vmin 0.85vmin;
+    zoom: 0.8;
+}
+
+/* Keep the two naturally long header actions compact and at the same visual
+   height as Text Shown. Their original text remains in the DOM as the
+   accessible name. */
+#btnToCentralMenu.pixelBtn > .label,
+#btnQuestions.pixelBtn > .label,
+#btnFeedback.pixelBtn > .label {
+    font-size: 0;
+}
+
+#btnToCentralMenu.pixelBtn > .label::after,
+#btnQuestions.pixelBtn > .label::after,
+#btnFeedback.pixelBtn > .label::after {
+    display: block;
+    white-space: pre;
+    font-size: 2.35vmin;
+    line-height: 1;
+}
+
+#btnToCentralMenu.pixelBtn > .label::after {
+    content: "Return";
+    font-size: 2.7vmin;
+}
+
+#btnQuestions.pixelBtn > .label::after {
+    content: "Practice\A Questions";
+    font-size: 2.2vmin;
+}
+
+#btnFeedback.pixelBtn > .label::after {
+    content: "Feedback";
+}
+
+#btnToCentralMenu.pixelBtn > .label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6vmin;
+}
+
+#btnToCentralMenu.pixelBtn {
+    width: 17vmin;
+}
+
+#btnQuestions.pixelBtn {
+    width: 12.5vmin;
+}
+
+#btnFeedback.pixelBtn {
+    width: 15vmin;
+}
+
+#btnToCentralMenu.pixelBtn > .label::before,
+.nav-btn.pixelBtn > .label::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 0;
+    height: 0;
+    border-top: 1.25vmin solid transparent;
+    border-bottom: 1.25vmin solid transparent;
+    border-right: 1.85vmin solid #4b5455;
+    filter: drop-shadow(0.08vmin 0.08vmin 0 rgba(255, 255, 255, 0.75));
+}
+
+#btnToCentralMenu.pixelBtn:hover > .label::before,
+.nav-btn.pixelBtn:hover > .label::before {
+    display: none;
+}
+
+#btnToCentralMenu.pixelBtn:hover > .label::after {
+    content: "To Main BioME\A Menu";
+    font-size: 2vmin;
+}
+
+#btnFeedback.pixelBtn:hover > .label::after {
+    content: "Return\A Comments";
+    font-size: 2.2vmin;
 }
 
 /* Return / navigation buttons on Citations, Excerpts, PopUps, Resources */
@@ -117,22 +205,39 @@
     /* These pages set max-height/width 10vmin; let the button size to text. */
     max-width: none;
     max-height: none;
-    padding: 1.4vmin 2.6vmin;
+    width: 17vmin;
+    height: 6.2vh;
+    padding: 0.85vmin 1.2vmin;
 }
 
 .nav-btn.pixelBtn > .label {
-    font-size: 3vmin;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7vmin;
+    font-size: 0 !important;
+}
+
+.nav-btn.pixelBtn > .label::after {
+    content: "Return";
+    white-space: pre;
+    font-size: 3.1vmin;
+    line-height: 1;
+}
+
+.nav-btn.pixelBtn:hover > .label::after {
+    content: "To Main BioME\A Menu";
+    font-size: 2.1vmin;
 }
 
 /* PopUp download buttons */
 .downloadButton.pixelBtn {
     width: auto;
     height: auto;
-    padding: 1.2vmin 2.2vmin;
+    padding: 0.7vmin 1.1vmin;
 }
 
 .downloadButton.pixelBtn > .label {
-    font-size: 1.7vmin;
+    font-size: 1.85vmin;
 }
 
 /* Central menu "Show / Hide Explanatory Text" toggle (legacy width:8% was sized for an image) */
@@ -183,10 +288,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .pixelBtn {
+    .pixelBtn,
+    .pixelBtn::after {
         transition: none;
     }
 
+    .pixelBtn:hover,
     .pixelBtn:active,
     .pixelBtn.is-clicked {
         transform: none;
@@ -217,8 +324,9 @@
 /* Lesson header toggle: let two lines breathe; the bank centres it */
 #btnTogTextLessonMenuX.pixelBtn,
 #btnTogTextLessonMenuT.pixelBtn {
-    height: auto;
-    min-height: 4.5vh;
+    width: 13.5vmin;
+    height: 6vh;
+    min-height: 6vh;
     align-self: center;
 }
 
@@ -264,12 +372,11 @@
 #btnTogTextLessonMenuX.pixelBtn > .label::after,
 #btnTogTextLessonMenuT.pixelBtn > .label::after {
     white-space: pre;
-    text-align: left;
+    text-align: center;
     line-height: 1.04;
     font-weight: 900;
     letter-spacing: -0.01em;
     color: #141414;
-    text-shadow: 0.12vmin 0.12vmin 0 rgba(255, 255, 255, 0.9);
     font-size: 2.2vmin;
 }
 
@@ -287,39 +394,65 @@
    header buttons instead of towering over them. */
 #btnTogTextLessonMenuX.pixelBtn,
 #btnTogTextLessonMenuT.pixelBtn {
-    padding: 0.25vmin 1.1vmin;
-    gap: 0.9vmin;
+    padding: 0.25vmin 0.7vmin;
+    gap: 0.3vmin;
 }
 
 #btnTogTextLessonMenuX.pixelBtn > .label,
 #btnTogTextLessonMenuT.pixelBtn > .label {
-    gap: 0.9vmin;
+    justify-content: center;
+    gap: 0.3vmin;
 }
 
 #btnTogTextLessonMenuX.pixelBtn > .label::before,
 #btnTogTextLessonMenuT.pixelBtn > .label::before {
-    width: 3.1vmin;
-    height: 3.1vmin;
+    width: 4.6vmin;
+    height: 4.6vmin;
 }
 
 #btnTogTextLessonMenuX.pixelBtn > .label::after,
 #btnTogTextLessonMenuT.pixelBtn > .label::after {
-    font-size: 1.55vmin;
+    font-size: 1.95vmin;
     line-height: 1.0;
+}
+
+#btnTogTextLessonMenuX.pixelBtn:hover > .label::before,
+#btnTogTextLessonMenuT.pixelBtn:hover > .label::before,
+#btnToCentralMenuX.pixelBtn:hover > .label::before,
+#btnToCentralMenuT.pixelBtn:hover > .label::before {
+    display: none;
+}
+
+#btnTogTextLessonMenuX.pixelBtn:hover > .label::after {
+    content: "Click to Hide\A Explanations";
+    font-size: 1.55vmin;
+}
+
+#btnTogTextLessonMenuT.pixelBtn:hover > .label::after {
+    content: "Click to Show\A Explanations";
+    font-size: 1.55vmin;
 }
 
 /* Central-menu toggle sits in a tight band between the title and the menu, so
    keep it compact (a smaller icon, font and padding) to avoid crowding. */
 #btnToCentralMenuX.pixelBtn,
 #btnToCentralMenuT.pixelBtn {
-    width: 12%;
-    padding: 0.6vmin 1.2vmin 0.6vmin 0.9vmin;
+    width: 16.5vmin;
+    height: 6vh;
+    zoom: 0.8;
+    padding: 0.75vmin 0.8vmin 0.75vmin 0.65vmin;
     border-width: 0.12vmin;
     box-shadow:
         inset 0.14vmin 0.14vmin 0 #dde3e3,
         inset -0.14vmin -0.14vmin 0 #444b4b,
         0.2vmin 0.2vmin 0 #000;
     transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+}
+
+#btnToCentralMenuX.pixelBtn > .label,
+#btnToCentralMenuT.pixelBtn > .label {
+    justify-content: center;
+    gap: 0.3vmin;
 }
 
 #btnToCentralMenuX.pixelBtn::after,
@@ -349,24 +482,24 @@
 
 #btnToCentralMenuX.pixelBtn > .label::before,
 #btnToCentralMenuT.pixelBtn > .label::before {
-    width: 3.1vmin;
-    height: 3.1vmin;
+    width: 4.6vmin;
+    height: 4.6vmin;
 }
 
 #btnToCentralMenuX.pixelBtn > .label::after,
 #btnToCentralMenuT.pixelBtn > .label::after {
-    font-size: 1.6vmin;
+    font-size: 2vmin;
     line-height: 1.02;
 }
 
 #btnToCentralMenuX.pixelBtn:hover > .label::after {
     content: "Click to Hide\A Explanations";
-    font-size: 1.25vmin;
+    font-size: 1.7vmin;
 }
 
 #btnToCentralMenuT.pixelBtn:hover > .label::after {
     content: "Click to Show\A Explanations";
-    font-size: 1.25vmin;
+    font-size: 1.7vmin;
 }
 
 @media (max-aspect-ratio: 1650/1300) {
@@ -397,5 +530,75 @@
     #btnTogTextLessonMenuT.pixelBtn > .label::before {
         width: 6.2vw;
         height: 6.2vw;
+    }
+}
+
+/* Square video transport — same coded chrome and inner gradient as the
+   header buttons, with the original icon set. */
+#btnLessonMenu.pixelBtn,
+#btnBack.pixelBtn,
+#btnSlower.pixelBtn,
+#btnFaster.pixelBtn {
+    flex: 0 0 auto;
+    width: 5.9vh;
+    height: 5.9vh;
+    aspect-ratio: 1;
+    padding: 0;
+}
+
+#btnLessonMenu.pixelBtn > .label {
+    font-size: 0;
+}
+
+#btnLessonMenu.pixelBtn > .label::after {
+    content: "Menu";
+    font-size: 1.55vmin;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+#btnBack.pixelBtn > .label,
+#btnSlower.pixelBtn > .label,
+#btnFaster.pixelBtn > .label {
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+#btnBack.pixelBtn::before,
+#btnSlower.pixelBtn::before,
+#btnFaster.pixelBtn::before {
+    content: "";
+    position: relative;
+    z-index: 1;
+    display: block;
+    width: 2.35vh;
+    height: 2.35vh;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+
+#btnBack.pixelBtn::before {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'><rect x='2' y='4' width='5' height='16' fill='%234b5455' stroke='%23111111' stroke-width='1.4'/><polygon points='28,3 10,12 28,21' fill='%234b5455' stroke='%23111111' stroke-width='1.4' stroke-linejoin='round'/></svg>");
+}
+
+#btnSlower.pixelBtn::before {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'><polygon points='16,3 2,12 16,21' fill='%234b5455' stroke='%23111111' stroke-width='1.4' stroke-linejoin='round'/><polygon points='30,3 16,12 30,21' fill='%234b5455' stroke='%23111111' stroke-width='1.4' stroke-linejoin='round'/></svg>");
+}
+
+#btnFaster.pixelBtn::before {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 24'><polygon points='2,3 16,12 2,21' fill='%234b5455' stroke='%23111111' stroke-width='1.4' stroke-linejoin='round'/><polygon points='16,3 30,12 16,21' fill='%234b5455' stroke='%23111111' stroke-width='1.4' stroke-linejoin='round'/></svg>");
+}
+
+@media (max-aspect-ratio: 1650/1300) {
+    #btnLessonMenu.pixelBtn,
+    #btnBack.pixelBtn,
+    #btnSlower.pixelBtn,
+    #btnFaster.pixelBtn {
+        width: 4.5vw;
+        height: 4.5vw;
     }
 }

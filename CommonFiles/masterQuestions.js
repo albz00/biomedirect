@@ -13,6 +13,11 @@ const quiz = document.getElementById('quiz');
 //const submitBtn = document.getElementById('submit');
 const prevBtn = document.getElementById('prev');
 const nextBtn = document.getElementById('next');
+const returnBtn = document.getElementById('return');
+if (returnBtn) {
+    returnBtn.classList.add('nav-btn', 'pixelBtn');
+    returnBtn.innerHTML = '<span class="label">Return</span>';
+}
 var attemptTracker = [];
 var remaining = qBank.length;
 

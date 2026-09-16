@@ -226,8 +226,6 @@
                                         Scan Video
                                     </button>
                                     <button type="button" id="aiTitleMappingBtn" class="btn btn-secondary btn-sm" title="Let the AI read the chapter title screens in the video and match each one to a chapter in the menu. Fills in the chapter list below — you can fix any it gets wrong.">Auto-Match Chapters</button>
-                                    <button type="button" id="saveGreenMenuMappingBtn" class="btn btn-primary btn-sm" title="Save the chapter matches. Each matched chapter becomes a clickable link that jumps to the right spot in the video.">Save Chapter Links</button>
-                                    <button type="button" id="srcArraySaveAllBtn" class="btn btn-primary btn-sm" title="Save the list of pauses and chapters below">Save Changes</button>
                                     <button type="button" id="wipeTimelineBtn" class="btn btn-danger btn-sm srcarray-editor-actions-spacer" title="Erase the pauses, chapters, and replays for this lesson so you can scan the video again from scratch. The attached video stays.">
                                         Clear &amp; Start Over
                                     </button>
@@ -326,7 +324,7 @@
                             <div id="greenMappingScaffoldWrap" class="green-mapping-scaffold" hidden>
                                 <details open>
                                     <summary class="green-mapping-summary">Chapter Matches (check &amp; fix)</summary>
-                                    <p class="green-mapping-hint">Here is each chapter title screen the AI found in the video and the menu chapter it matched it to. Use the dropdown to fix any wrong matches, then click <strong>Save Chapter Links</strong>. Each matched chapter becomes a clickable link that jumps straight to that spot in the video. Leave a row set to <em>&mdash; none &mdash;</em> if it shouldn't link anywhere. The <strong>reviewed</strong> checkbox is just a note to yourself &mdash; it doesn't change anything.</p>
+                                    <p class="green-mapping-hint">Here is each chapter title screen the AI found in the video and the menu chapter it matched it to. Use the dropdown to fix any wrong matches, then save from the box in the bottom-right corner. Each matched chapter becomes a clickable link that jumps straight to that spot in the video. Leave a row set to <em>&mdash; none &mdash;</em> if it shouldn't link anywhere. The <strong>reviewed</strong> checkbox is just a note to yourself &mdash; it doesn't change anything.</p>
                                     <div class="green-mapping-table-wrap">
                                         <table class="green-mapping-table">
                                             <thead>
@@ -414,6 +412,7 @@
             </div>
 
             <footer class="dashboard-footer">
+                <p class="shortcut-note">On a lesson video, press <kbd>Shift</kbd>+<kbd>D</kbd> to turn the marker detector overlay on or off. It stays off until you press it.</p>
                 <button id="devModeToggle" class="btn btn-secondary dashboard-footer-dev" type="button" title="Extra technical tools for troubleshooting. You normally don't need this — leave it off.">
                     <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-code-bracket"/></svg>
                     <span class="btn-label">Developer Tools</span>
@@ -548,7 +547,7 @@
                         Lessons are grouped by section, the same sections students see on the menu. Click a section title to collapse or expand it. A colored dot next to a lesson name is status: one color means a video is attached, the other means it still needs one. If a lesson or section is hidden from students via Edit Menu, it still appears here so you can work on it, usually with a Hidden mark.
                     </p>
                     <p>
-                        Some sections have a name field and a <strong>Save</strong> button. That renames the section as it appears in the menu. It does not delete the section or move lessons.
+                        Some sections have a name field. Change it, then save from the box that appears in the bottom-right corner. That renames the section as it appears in the menu. It does not delete the section or move lessons.
                     </p>
                     <p>
                         The small arrow at the top of the sidebar collapses the whole list so the working area on the right is wider.
@@ -563,7 +562,7 @@
                     </p>
                     <h3>Lesson Name</h3>
                     <p>
-                        This is the name students see in the menu. Change the text and click <strong>Save Lesson Name</strong>. Renaming is safe. It does not change the video, the pauses, or the chapter links. It also does not move the lesson to a different section. Use Edit Menu if you need to move or hide it.
+                        This is the name students see in the menu. Change the text, then save from the box in the bottom-right corner. Renaming is safe. It does not change the video, the pauses, or the chapter links. It also does not move the lesson to a different section. Use Edit Menu if you need to move or hide it.
                     </p>
                     <h3>Attach a video</h3>
                     <p>
@@ -602,20 +601,16 @@
                     <p>
                         The reviewed checkbox is only a note to yourself. It does not change student playback. Saving is what matters.
                     </p>
-                    <h3><span class="inst-chip inst-chip-links">Save Chapter Links</span> and <span class="inst-chip inst-chip-save">Save Changes</span></h3>
+                    <h3><span class="inst-chip inst-chip-save">Save</span> (bottom-right)</h3>
                     <p>
-                        These are two different saves. You usually need both.
+                        There is one Save for the whole panel. When you change a lesson name, a section name, the pause list, or chapter matches, a box appears in the bottom-right corner — the same place as the loading messages — and asks you to save. Click that <strong>Save</strong>. Until you do, students still have the previous version.
                     </p>
-                    <ul>
-                        <li><span class="inst-chip inst-chip-links">Save Chapter Links</span> stores which menu chapters jump to which times. After this, a student clicking a chapter should land on that chapter’s title screen / start.</li>
-                        <li><span class="inst-chip inst-chip-save">Save Changes</span> stores the pause, chapter, and replay list itself. After this, the video should pause and replay at the scanned spots.</li>
-                    </ul>
                     <p>
-                        If you only save chapter links, jumps may work but pauses may be missing. If you only save changes, pauses may work but chapter clicks may not. Do both after you are happy with the list and the matches.
+                        That single save writes everything that is pending: chapter links (so a student clicking a chapter jumps to the right time) and the pause / replay list (so the video actually pauses and loops). You do not hunt for separate Save buttons.
                     </p>
                     <h3><span class="inst-chip inst-chip-clear">Clear &amp; Start Over</span></h3>
                     <p>
-                        This erases the pause and chapter list for this lesson version so you can scan again from a clean slate. The attached video stays. Use it when the list is empty, garbled, leftover from a different file, or you attached the right video after a bad scan. Then scan again, match chapters again, and save both buttons again.
+                        This erases the pause and chapter list for this lesson version so you can scan again from a clean slate. The attached video stays. Use it when the list is empty, garbled, leftover from a different file, or you attached the right video after a bad scan. Then scan again, match chapters again, and save from the bottom-right box.
                     </p>
 
                     <h2 id="guide-available">Available Videos</h2>
@@ -655,19 +650,25 @@
                     <p>
                         The bottom-right pop-up is the status of the current task: loading the list, uploading, scanning, matching, saving, or an error. It stays visible while you scroll. If something fails, read that message before clicking again. Long scans are normal. Repeated clicks can stack work and make a mess.
                     </p>
+                    <p>
+                        When you have unsaved edits, a <strong>Save your changes?</strong> box appears in that same corner. That is the only save you need for the dashboard. (Edit Menu still has its own Save inside that window.)
+                    </p>
 
                     <h2 id="guide-dev">Developer Tools</h2>
                     <p>
                         The button at the very bottom of the page turns on extra technical controls for troubleshooting. Leave it off for normal work. You do not need it to attach videos, scan, match chapters, edit the menu, or save.
                     </p>
+                    <p>
+                        On a lesson video itself (not this admin page), <strong>Shift+D</strong> turns the marker detector overlay on or off. It is off until you press that shortcut. The same note is at the bottom of this panel so you can find it later.
+                    </p>
 
                     <h2 id="guide-wrong">If something looks wrong</h2>
                     <ul>
-                        <li><strong>A chapter jumps to the wrong place.</strong> Select the lesson, open Chapter Matches, fix that row’s dropdown, click Save Chapter Links again. Spot-check the student menu.</li>
-                        <li><strong>The pause list is empty or obviously wrong.</strong> Confirm the right video is attached and the right version is selected. Click Clear &amp; Start Over, then Scan Video, then Auto-Match Chapters, then both saves.</li>
+                        <li><strong>A chapter jumps to the wrong place.</strong> Select the lesson, open Chapter Matches, fix that row’s dropdown, then save from the bottom-right box. Spot-check the student menu.</li>
+                        <li><strong>The pause list is empty or obviously wrong.</strong> Confirm the right video is attached and the right version is selected. Click Clear &amp; Start Over, then Scan Video, then Auto-Match Chapters, then save from the bottom-right box.</li>
                         <li><strong>You attached the wrong video.</strong> Assign the correct one, then scan and match again. The old list belongs to the old file.</li>
                         <li><strong>You edited the Without Text copy by accident.</strong> Switch Which version?, then do the work again on the correct copy. The two versions do not copy from each other.</li>
-                        <li><strong>Pauses work but chapter clicks do not, or the reverse.</strong> You likely saved only one of the two buttons. Save Chapter Links and Save Changes both.</li>
+                        <li><strong>Pauses work but chapter clicks do not, or the reverse.</strong> You likely still have unsaved edits. Use the Save box in the bottom-right corner.</li>
                         <li><strong>The left list is empty after login.</strong> Wait for the corner message to finish. If it errors, click Load Lessons &amp; Videos. Stay logged in.</li>
                         <li><strong>A new upload does not appear in the dropdown.</strong> Click Load Lessons &amp; Videos. Confirm the file was an MP4 and, for Without Text, that the name ends in <code>_x</code>.</li>
                         <li><strong>A save failed.</strong> You were probably signed out. Log in and save again. The student lesson does not change until a save succeeds.</li>
@@ -723,19 +724,12 @@
                         <li>
                             <span class="inst-step-num inst-step-num--7">7</span>
                             <div class="inst-step-body">
-                                <strong>Save Chapter Links</strong>
-                                <p>This is what makes a student clicking a chapter jump to the right time. Without this save, jumps will not work even if the list looks perfect here.</p>
+                                <strong>Save</strong>
+                                <p>Use the Save box that appears in the bottom-right corner. That one click stores chapter links (so jumps work) and the pause / replay list.</p>
                             </div>
                         </li>
                         <li>
                             <span class="inst-step-num inst-step-num--8">8</span>
-                            <div class="inst-step-body">
-                                <strong>Save Changes</strong>
-                                <p>This stores the pause, chapter, and replay list. Without this save, the video will not pause or replay for students. You need this <em>and</em> Save Chapter Links.</p>
-                            </div>
-                        </li>
-                        <li>
-                            <span class="inst-step-num inst-step-num--9">9</span>
                             <div class="inst-step-body">
                                 <strong>Check it on the student menu</strong>
                                 <p>Open View Student Menu. Click two or three chapters, let a pause happen, and confirm a replay if the lesson has one. Then switch versions if you still need the other copy.</p>
@@ -802,8 +796,8 @@
                         <li>
                             <span class="inst-step-num inst-step-num--7">7</span>
                             <div class="inst-step-body">
-                                <strong>Save Chapter Links, then Save Changes</strong>
-                                <p>You need both. Links make chapter clicks jump. Changes save pauses and replays.</p>
+                                <strong>Save</strong>
+                                <p>Click Save in the bottom-right box. That stores chapter jumps and the pause / replay list together.</p>
                             </div>
                         </li>
                         <li>
@@ -817,7 +811,7 @@
 
                     <h2 id="guide-workflow-wrong">If something looks wrong</h2>
                     <ul>
-                        <li><strong>Wrong jump</strong> &mdash; fix that row in Chapter Matches and Save Chapter Links again.</li>
+                        <li><strong>Wrong jump</strong> &mdash; fix that row in Chapter Matches and save from the bottom-right box.</li>
                         <li><strong>Empty or wrong list</strong> &mdash; Clear &amp; Start Over, then Scan Video again.</li>
                         <li><strong>Wrong video or wrong version</strong> &mdash; attach the right file on the right version, then scan and save again.</li>
                     </ul>
@@ -1018,7 +1012,14 @@
         </div>
     </div>
 
-    <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+    <div id="cornerDock" class="corner-dock">
+        <div id="adminSaveDock" class="admin-save-dock" hidden>
+            <p class="admin-save-dock-title">Save your changes?</p>
+            <p id="adminSaveDockSummary" class="admin-save-dock-summary">Edits are not live for students until you save.</p>
+            <button type="button" id="adminSaveDockBtn" class="btn btn-primary btn-sm">Save</button>
+        </div>
+        <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+    </div>
 
     <script src="admin.js"></script>
 </body>

@@ -589,6 +589,7 @@ function setupEventListeners() {
     setupSrcArrayEditorListeners();
     setupDevModeToggle();
     setupAdminHints();
+    setupAdminSaveDock();
 
     // Profile button: open profile modal and fill with current user
     if (profileBtn && profileModal) {
@@ -906,6 +907,242 @@ function setStatus(text, type = '') {
     } else if (variant === 'info') {
         activeToastTimer = setTimeout(dismissActiveToast, 2500);
     }
+}
+
+const ADMIN_DIRTY_LABELS = {
+    timeline: 'pauses & chapters',
+    chapterLinks: 'chapter links',
+    lessonName: 'lesson name',
+    playback: 'playback settings',
+    chapters: 'chapter names',
+    sections: 'section names',
+};
+const pendingAdminSaves = {
+    timeline: false,
+    chapterLinks: false,
+    lessonName: false,
+    playback: false,
+    chapters: false,
+    sections: false,
+};
+const pendingLessonNames = {};
+const pendingSectionDisplayNames = {};
+
+function hasPendingAdminSaves() {
+    return Object.keys(ADMIN_DIRTY_LABELS).some((k) => pendingAdminSaves[k]);
+}
+
+function pendingAdminSaveSummary() {
+    const parts = Object.keys(ADMIN_DIRTY_LABELS).filter((k) => pendingAdminSaves[k]).map((k) => ADMIN_DIRTY_LABELS[k]);
+    if (!parts.length) return 'Edits are not live for students until you save.';
+    if (parts.length === 1) return `Pending: ${parts[0]}. Not live until you save.`;
+    return `Pending: ${parts.join(', ')}. Not live until you save.`;
+}
+
+function updateAdminSaveDock() {
+    const dock = document.getElementById('adminSaveDock');
+    const summary = document.getElementById('adminSaveDockSummary');
+    const dirty = hasPendingAdminSaves();
+    if (dock) dock.hidden = !dirty;
+    if (summary) summary.textContent = pendingAdminSaveSummary();
+    document.body.classList.toggle('admin-save-pending', dirty);
+}
+
+function markAdminDirty(kind) {
+    if (!ADMIN_DIRTY_LABELS[kind]) return;
+    pendingAdminSaves[kind] = true;
+    updateAdminSaveDock();
+}
+
+function clearPendingAdminSaves() {
+    Object.keys(ADMIN_DIRTY_LABELS).forEach((k) => { pendingAdminSaves[k] = false; });
+    Object.keys(pendingLessonNames).forEach((k) => { delete pendingLessonNames[k]; });
+    Object.keys(pendingSectionDisplayNames).forEach((k) => { delete pendingSectionDisplayNames[k]; });
+    updateAdminSaveDock();
+}
+
+function confirmDiscardPendingAdminSaves() {
+    if (!hasPendingAdminSaves()) return true;
+    return window.confirm('You have unsaved changes. Leave without saving?');
+}
+
+function adminDirtyKindFromTarget(target) {
+    if (!target || !target.closest) return null;
+    if (target.closest('.srcarray-input-start, .srcarray-input-end, .srcarray-input-flagged, .srcarray-input-manualOverride, .srcarray-input-menuLink, .srcarray-input-chapterIndex')) {
+        return 'timeline';
+    }
+    if (target.closest('.green-mapping-select, .green-mapping-confirm')) return 'chapterLinks';
+    if (target.closest('[id^="name-input-"]') || (target.id && target.id.indexOf('name-input-') === 0)) return 'lessonName';
+    if (target.closest('[id^="forceChapterStartZero-"]') || (target.id && target.id.indexOf('forceChapterStartZero-') === 0)) return 'playback';
+    if (target.closest('.chapter-name-input')) return 'chapters';
+    if (target.closest('.section-index-input')) return 'sections';
+    return null;
+}
+
+function rememberPendingFromTarget(target) {
+    if (!target) return;
+    if (target.id && target.id.indexOf('name-input-') === 0) {
+        pendingLessonNames[target.id.slice('name-input-'.length)] = target.value;
+    }
+    if (target.classList && target.classList.contains('section-index-input')) {
+        const key = target.getAttribute('data-original-section');
+        if (key) pendingSectionDisplayNames[key] = target.value;
+    }
+}
+
+async function persistSrcArrayFromTable() {
+    if (!currentSrcArrayLessonId || currentSrcArrayForEditor.length === 0) {
+        throw new Error('Nothing to save yet. Pick a lesson and scan its video first.');
+    }
+    const tbody = document.getElementById('srcArrayEditorTbody');
+    if (!tbody) throw new Error('Pause list is not on the page.');
+    const rows = tbody.querySelectorAll('tr[data-index]');
+    const updated = [];
+    for (const row of rows) {
+        const index = parseInt(row.getAttribute('data-index'), 10);
+        const seg = currentSrcArrayForEditor[index] ? { ...currentSrcArrayForEditor[index] } : {};
+        const startInput = row.querySelector('.srcarray-input-start');
+        const endInput = row.querySelector('.srcarray-input-end');
+        const menuLinkInput = row.querySelector('.srcarray-input-menuLink');
+        const chapterIdxInput = row.querySelector('.srcarray-input-chapterIndex');
+        const flaggedInput = row.querySelector('.srcarray-input-flagged');
+        const overrideInput = row.querySelector('.srcarray-input-manualOverride');
+        if (startInput) seg.src_start = startInput.value === '' ? null : parseFloat(startInput.value);
+        if (endInput) seg.src_end = endInput.value === '' ? null : parseFloat(endInput.value);
+        if (menuLinkInput) seg.menuLink = menuLinkInput.value.trim() || '';
+        if (chapterIdxInput) {
+            const raw = chapterIdxInput.value.trim();
+            seg.chapterIndex = raw === '' ? null : parseInt(raw, 10);
+        }
+        if (flaggedInput) seg.flagged = flaggedInput.checked;
+        if (overrideInput) seg.manualOverride = overrideInput.checked;
+        const ch = seg.chapterIndex;
+        if (Number.isFinite(ch) && ch > 0 && currentChapterTitlesForEditor[ch - 1]) {
+            seg.title = currentChapterTitlesForEditor[ch - 1];
+        }
+        if (seg.src_start != null) {
+            seg.contentStart = seg.src_start;
+            seg.start = seg.src_start;
+        }
+        if (seg.src_end != null) {
+            seg.contentEnd = seg.src_end;
+            seg.end = seg.src_end;
+        }
+        updated.push(seg);
+    }
+    const playableOnly = updated.filter((seg) => rowIncludedInPlayableTimeline(seg));
+    const dropped = updated.length - playableOnly.length;
+    await db.collection('lessons').doc(currentSrcArrayLessonId).set({ srcArray: playableOnly }, { merge: true });
+    currentSrcArrayForEditor = playableOnly;
+    const statusEl = document.getElementById('srcArrayEditorStatus');
+    if (statusEl) statusEl.textContent = `${playableOnly.length} item(s) saved`;
+    return dropped;
+}
+
+async function persistGreenMenuMapping() {
+    if (!selectedLessonId) throw new Error('Select a lesson first');
+    const byMenuId = collectGreenMenuMappingFromTable();
+    const saveFn = functions.httpsCallable('saveGreenMenuMapping', { timeout: 60000 });
+    const result = await saveFn({ lessonId: selectedLessonId, byMenuId });
+    const data = result.data || {};
+    if (data.success === false) throw new Error("Couldn't save chapter links");
+    return data.savedCount;
+}
+
+async function saveAllPendingAdminChanges() {
+    const btn = document.getElementById('adminSaveDockBtn');
+    try {
+        requireAuth();
+    } catch (error) {
+        setStatus('You need to be logged in', 'error');
+        return;
+    }
+    if (!hasPendingAdminSaves()) {
+        setStatus('Nothing to save', 'success');
+        updateAdminSaveDock();
+        return;
+    }
+    if (btn) setButtonLoading(btn, true);
+    setStatus('Saving…', 'scanning');
+    const saved = [];
+    try {
+        if (pendingAdminSaves.timeline) {
+            const dropped = await persistSrcArrayFromTable();
+            pendingAdminSaves.timeline = false;
+            saved.push(dropped > 0
+                ? `pauses & chapters (${dropped} row(s) skipped)`
+                : 'pauses & chapters');
+        }
+        if (pendingAdminSaves.chapterLinks) {
+            const count = await persistGreenMenuMapping();
+            pendingAdminSaves.chapterLinks = false;
+            saved.push(`${count} chapter link(s)`);
+            setAiTitleMappingStatus('success', `Saved ${count} chapter link(s). Clicking those chapters now jumps to the right spot in the video.`);
+        }
+        if (pendingAdminSaves.lessonName && selectedLessonId) {
+            await saveLessonMetadata(selectedLessonId, null, { skipRerender: true });
+            pendingAdminSaves.lessonName = false;
+            delete pendingLessonNames[selectedLessonId];
+            saved.push('lesson name');
+        }
+        if (pendingAdminSaves.playback && selectedLessonId) {
+            await saveLessonPlaybackSettings(selectedLessonId, null, { skipStatus: true });
+            pendingAdminSaves.playback = false;
+            saved.push('playback settings');
+        }
+        if (pendingAdminSaves.chapters && selectedLessonId) {
+            await saveAllChapters(selectedLessonId, null, { skipStatus: true });
+            pendingAdminSaves.chapters = false;
+            saved.push('chapter names');
+        }
+        if (pendingAdminSaves.sections) {
+            const keys = new Set(Object.keys(pendingSectionDisplayNames));
+            document.querySelectorAll('.section-index-input[data-original-section]').forEach((el) => {
+                const key = el.getAttribute('data-original-section');
+                if (key) keys.add(key);
+            });
+            for (const key of keys) {
+                await saveSectionDisplayName(key, null, { skipRerender: true, skipStatus: true });
+            }
+            pendingAdminSaves.sections = false;
+            Object.keys(pendingSectionDisplayNames).forEach((k) => { delete pendingSectionDisplayNames[k]; });
+            saved.push('section names');
+        }
+        updateAdminSaveDock();
+        renderSidebarTree();
+        displaySelectedLesson();
+        await refreshSrcArrayEditor();
+        setStatus(saved.length ? `Saved ${saved.join(', ')}` : 'Saved', 'success');
+    } catch (e) {
+        console.error('Universal save failed:', e);
+        updateAdminSaveDock();
+        setStatus("Couldn't save: " + (e && e.message ? e.message : String(e)), 'error');
+    } finally {
+        if (btn) setButtonLoading(btn, false);
+    }
+}
+
+function setupAdminSaveDock() {
+    const btn = document.getElementById('adminSaveDockBtn');
+    if (btn) btn.addEventListener('click', () => saveAllPendingAdminChanges());
+    document.addEventListener('input', (e) => {
+        const kind = adminDirtyKindFromTarget(e.target);
+        if (!kind) return;
+        rememberPendingFromTarget(e.target);
+        markAdminDirty(kind);
+    });
+    document.addEventListener('change', (e) => {
+        const kind = adminDirtyKindFromTarget(e.target);
+        if (!kind) return;
+        rememberPendingFromTarget(e.target);
+        markAdminDirty(kind);
+    });
+    window.addEventListener('beforeunload', (e) => {
+        if (!hasPendingAdminSaves()) return;
+        e.preventDefault();
+        e.returnValue = '';
+    });
+    updateAdminSaveDock();
 }
 
 async function loadAvailableVideos() {
@@ -1607,6 +1844,11 @@ function renderSidebarTree() {
                     : '';
                 return `<div class="tree-lesson ${statusClass}${selectedClass}" data-lesson-id="${lesson.lessonId}" onclick="selectLesson('${escId}')"><span class="tree-lesson-status">${status}</span><span class="tree-lesson-name">${safeLessonName}</span>${variantTag}</div>`;
             }).join('');
+        const pendingSection = pendingSectionDisplayNames[section.originalSection];
+        const sectionInputValue = String(pendingSection != null ? pendingSection : section.sectionName)
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
         const sectionKeyAttr = section.originalSection.replace(/"/g, '&quot;');
         return `
             <div class="tree-section${isCollapsed ? ' collapsed' : ''}" data-section="${sectionKeyAttr}">
@@ -1615,8 +1857,7 @@ function renderSidebarTree() {
                     <span class="tree-section-title">${safeSectionName}</span>
                 </div>
                 <div class="tree-section-edit">
-                    <input type="text" class="section-index-input" id="section-index-input-${sectionKey}" value="${safeSectionName}">
-                    <button type="button" class="btn-section-save" onclick="saveSectionDisplayName('${section.originalSection.replace(/'/g, "\\'")}', this)">Save</button>
+                    <input type="text" class="section-index-input" id="section-index-input-${sectionKey}" data-original-section="${sectionKeyAttr}" value="${sectionInputValue}">
                 </div>
                 <div class="tree-section-children">${lessonRows}</div>
             </div>`;
@@ -2090,6 +2331,11 @@ function getLessonCardHTML(lesson, playbackOpts) {
         return `<option value="${fullPath}" ${selected}>${label}</option>`;
     }).join('');
     const safeName = lesson.name.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const pendingName = pendingLessonNames[lesson.lessonId];
+    const nameInputValue = String(pendingName != null ? pendingName : lesson.name)
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
     const safeLessonId = lesson.lessonId.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const safePath = lesson.path.replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const safeSection = (lesson.section || 'Uncategorized').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -2116,9 +2362,9 @@ function getLessonCardHTML(lesson, playbackOpts) {
                 <div class="lesson-metadata-edit">
                     <div class="metadata-row">
                         <label for="name-input-${lesson.lessonId}">Lesson Name:</label>
-                        <input type="text" id="name-input-${lesson.lessonId}" value="${safeName}">
+                        <input type="text" id="name-input-${lesson.lessonId}" value="${nameInputValue}">
                     </div>
-                    <button class="btn-metadata-save" onclick="saveLessonMetadata('${escId}', this)">Save Lesson Name</button>
+                    <p class="lesson-name-hint">Save from the box in the bottom-right corner.</p>
                 </div>
                 <h4 class="lesson-attach-title">Attach a video to this lesson</h4>
                 <div class="assignment-row">
@@ -2138,15 +2384,12 @@ function getLessonCardHTML(lesson, playbackOpts) {
                         <input type="checkbox" id="forceChapterStartZero-${lesson.lessonId}"${forceAtZeroChecked}>
                         Force first chapter to start at 0:00 (use video start; ignore mapped first yellow contentStart)
                     </label>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="saveLessonPlaybackSettings('${escId}', this)"><span class="btn-label">Save playback settings</span></button>
-                    <p class="lesson-playback-settings-hint">Freeze markers (yellow/green) still control stop/resume. This only fixes lesson entry when title mapping is not ready.</p>
+                    <p class="lesson-playback-settings-hint">Freeze markers (yellow/green) still control stop/resume. This only fixes lesson entry when title mapping is not ready. Save from the bottom-right box.</p>
                 </div>
                 <div class="lesson-chapters-block dev-only">
                     <button type="button" class="btn btn-secondary btn-chapters" onclick="showChaptersForLesson('${escId}')"><span class="btn-label">Show chapters</span></button>
                     <div id="chapters-container-${lesson.lessonId}" class="chapters-container" style="display:none;">
-                        <div class="chapters-toolbar">
-                            <button type="button" class="btn btn-primary btn-sm" onclick="saveAllChapters('${escId}', this)">Save all</button>
-                        </div>
+                        <p class="chapters-toolbar-hint">Chapter name edits save from the bottom-right box.</p>
                         <div id="chapters-edit-list-${lesson.lessonId}" class="chapters-edit-list"></div>
                     </div>
                 </div>
@@ -2155,6 +2398,8 @@ function getLessonCardHTML(lesson, playbackOpts) {
 }
 
 function selectLesson(lessonId) {
+    if (lessonId !== selectedLessonId && !confirmDiscardPendingAdminSaves()) return;
+    if (lessonId !== selectedLessonId) clearPendingAdminSaves();
     const lesson = lessonsData.find(l => l.lessonId === lessonId);
     if (lesson) collapsedSections.delete(lesson.originalSection);
     resetAiTitleMappingPanel();
@@ -3233,6 +3478,8 @@ function setupVariantToggle() {
             const next = btn.getAttribute('data-variant');
             if (next !== 't' && next !== 'x') return;
             if (next === currentVariant) return;
+            if (!confirmDiscardPendingAdminSaves()) return;
+            clearPendingAdminSaves();
 
             // Track the currently selected lesson by its stable baseId so we can re-key selection.
             const selected = selectedLessonId
@@ -3362,69 +3609,8 @@ function setupSrcArrayEditorListeners() {
     setupCollapsibleCard('selectedLessonCard', 'selectedLessonToggle', 'selectedLessonBody');
     setupCollapsibleCard('videosCard', 'videosCardToggle', 'videosCardBody');
     setupCursorPromptButtons();
-    const saveBtn = document.getElementById('srcArraySaveAllBtn');
     const generateBtn = document.getElementById('srcArrayGenerateFromYellowBtn');
     const minSegInput = document.getElementById('srcArrayMinSegInput');
-    if (saveBtn) {
-        saveBtn.addEventListener('click', async () => {
-            if (!currentSrcArrayLessonId || currentSrcArrayForEditor.length === 0) {
-                setStatus('Nothing to save yet. Pick a lesson and scan its video first.', 'error');
-                return;
-            }
-            const tbody = document.getElementById('srcArrayEditorTbody');
-            if (!tbody) return;
-            const rows = tbody.querySelectorAll('tr[data-index]');
-            const updated = [];
-            for (const row of rows) {
-                const index = parseInt(row.getAttribute('data-index'), 10);
-                const seg = currentSrcArrayForEditor[index] ? { ...currentSrcArrayForEditor[index] } : {};
-                const startInput = row.querySelector('.srcarray-input-start');
-                const endInput = row.querySelector('.srcarray-input-end');
-                const menuLinkInput = row.querySelector('.srcarray-input-menuLink');
-                const chapterIdxInput = row.querySelector('.srcarray-input-chapterIndex');
-                const flaggedInput = row.querySelector('.srcarray-input-flagged');
-                const overrideInput = row.querySelector('.srcarray-input-manualOverride');
-                if (startInput) seg.src_start = startInput.value === '' ? null : parseFloat(startInput.value);
-                if (endInput) seg.src_end = endInput.value === '' ? null : parseFloat(endInput.value);
-                if (menuLinkInput) seg.menuLink = menuLinkInput.value.trim() || '';
-                if (chapterIdxInput) {
-                    const raw = chapterIdxInput.value.trim();
-                    seg.chapterIndex = raw === '' ? null : parseInt(raw, 10);
-                }
-                if (flaggedInput) seg.flagged = flaggedInput.checked;
-                if (overrideInput) seg.manualOverride = overrideInput.checked;
-                const ch = seg.chapterIndex;
-                if (Number.isFinite(ch) && ch > 0 && currentChapterTitlesForEditor[ch - 1]) {
-                    seg.title = currentChapterTitlesForEditor[ch - 1];
-                }
-                if (seg.src_start != null) {
-                    seg.contentStart = seg.src_start;
-                    seg.start = seg.src_start;
-                }
-                if (seg.src_end != null) {
-                    seg.contentEnd = seg.src_end;
-                    seg.end = seg.src_end;
-                }
-                updated.push(seg);
-            }
-            const playableOnly = updated.filter((seg) => rowIncludedInPlayableTimeline(seg));
-            const dropped = updated.length - playableOnly.length;
-            setButtonLoading(saveBtn, true);
-            setStatus('Saving…', 'scanning');
-            try {
-                await db.collection('lessons').doc(currentSrcArrayLessonId).set({ srcArray: playableOnly }, { merge: true });
-                currentSrcArrayForEditor = playableOnly;
-                const saveNote = dropped > 0 ? ` (${dropped} row(s) skipped because the times didn't make sense)` : '';
-                setStatus(`Saved${saveNote}`, 'success');
-                const statusEl = document.getElementById('srcArrayEditorStatus');
-                if (statusEl) statusEl.textContent = `${playableOnly.length} item(s) saved`;
-            } catch (e) {
-                setStatus("Couldn't save: " + e.message, 'error');
-            } finally {
-                setButtonLoading(saveBtn, false);
-            }
-        });
-    }
     if (generateBtn && minSegInput) {
         generateBtn.addEventListener('click', async () => {
             if (!selectedLessonId) {
@@ -3560,6 +3746,9 @@ function setupSrcArrayEditorListeners() {
                 staleTimelineBuildDetected = false;
                 currentDetectionDataForEditor = null;
                 currentSrcArrayForEditor = [];
+                pendingAdminSaves.timeline = false;
+                pendingAdminSaves.chapterLinks = false;
+                updateAdminSaveDock();
                 await refreshSrcArrayEditor();
                 setStatus('Cleared. The video is still attached — click "Scan Video" to start over.', 'success');
             } catch (e) {
@@ -3613,9 +3802,10 @@ function setupSrcArrayEditorListeners() {
 
                 const line = `Matched ${data.mappedCount} of ${data.processedEventCount}; ${data.manualReviewCount} need a quick check`;
                 setAiTitleMappingStatus('success', line);
-                setStatus('Chapters matched — check them below, then click "Save Chapter Links".', 'success');
+                setStatus('Chapters matched — check them below, then save from the box in the bottom-right corner.', 'success');
                 // Reload persisted greenMenuMapping + AI results into the editable table.
                 await refreshSrcArrayEditor();
+                markAdminDirty('chapterLinks');
             } catch (err) {
                 console.error('mapGreenEventsToChaptersWithAI failed:', err);
                 let msg = err.message || String(err);
@@ -3626,42 +3816,6 @@ function setupSrcArrayEditorListeners() {
                 setStatus("Couldn't match chapters: " + msg, 'error');
             } finally {
                 setButtonLoading(aiTitleMappingBtn, false);
-            }
-        });
-    }
-
-    const saveGreenMenuMappingBtn = document.getElementById('saveGreenMenuMappingBtn');
-    if (saveGreenMenuMappingBtn) {
-        saveGreenMenuMappingBtn.addEventListener('click', async () => {
-            if (!selectedLessonId) {
-                setStatus('Select a lesson first', 'error');
-                return;
-            }
-            try {
-                requireAuth();
-            } catch (err) {
-                setStatus('You need to be logged in', 'error');
-                return;
-            }
-
-            const byMenuId = collectGreenMenuMappingFromTable();
-            setButtonLoading(saveGreenMenuMappingBtn, true);
-            try {
-                const saveFn = functions.httpsCallable('saveGreenMenuMapping', { timeout: 60000 });
-                const result = await saveFn({ lessonId: selectedLessonId, byMenuId });
-                const data = result.data || {};
-                if (data.success === false) {
-                    setStatus("Couldn't save chapter links", 'error');
-                    return;
-                }
-                setStatus(`Saved ${data.savedCount} chapter link(s) — they're live for students now.`, 'success');
-                setAiTitleMappingStatus('success', `Saved ${data.savedCount} chapter link(s). Clicking those chapters now jumps to the right spot in the video.`);
-                await refreshSrcArrayEditor();
-            } catch (err) {
-                console.error('saveGreenMenuMapping failed:', err);
-                setStatus("Couldn't save chapter links: " + (err.message || String(err)), 'error');
-            } finally {
-                setButtonLoading(saveGreenMenuMappingBtn, false);
             }
         });
     }
@@ -3715,10 +3869,12 @@ function toggleSectionInSidebar(sectionKey) {
 window.selectLesson = selectLesson;
 window.toggleSectionInSidebar = toggleSectionInSidebar;
 
-async function saveLessonMetadata(lessonId, btn) {
+async function saveLessonMetadata(lessonId, btn, opts) {
+    opts = opts || {};
     try {
         requireAuth(); // Ensure user is authenticated
     } catch (error) {
+        if (opts.skipRerender) throw error;
         alert('Authentication required. Please log in again.');
         return;
     }
@@ -3726,25 +3882,28 @@ async function saveLessonMetadata(lessonId, btn) {
     const nameInput = document.getElementById(`name-input-${lessonId}`);
     const lesson = lessonsData.find(l => l.lessonId === lessonId);
 
-    if (!nameInput || !lesson) {
+    if (!lesson) {
+        if (opts.skipRerender) throw new Error('Unable to find lesson metadata.');
         alert('Unable to find lesson metadata input.');
         return;
     }
 
-    const newName = nameInput.value.trim();
+    const newName = (nameInput ? nameInput.value : (pendingLessonNames[lessonId] != null ? pendingLessonNames[lessonId] : lesson.name)).trim();
 
     // Determine what actually changed relative to current effective values
     const hasLessonNameChange = newName !== lesson.name;
 
     // If nothing changed, skip write
     if (!hasLessonNameChange) {
-        setStatus('No metadata changes to save', 'success');
-        setTimeout(() => setStatus('Ready'), 2000);
+        if (!opts.skipStatus) {
+            setStatus('No metadata changes to save', 'success');
+            setTimeout(() => setStatus('Ready'), 2000);
+        }
         return;
     }
 
-    setButtonLoading(btn, true);
-    nameInput.disabled = true;
+    if (btn) setButtonLoading(btn, true);
+    if (nameInput) nameInput.disabled = true;
 
     try {
         const writes = [];
@@ -3784,16 +3943,21 @@ async function saveLessonMetadata(lessonId, btn) {
             }
         }
 
-        renderSidebarTree();
-        displaySelectedLesson();
-        setStatus('Lesson metadata saved', 'success');
-        setTimeout(() => setStatus('Ready'), 3000);
+        if (!opts.skipRerender) {
+            renderSidebarTree();
+            displaySelectedLesson();
+        }
+        if (!opts.skipStatus && !opts.skipRerender) {
+            setStatus('Lesson metadata saved', 'success');
+            setTimeout(() => setStatus('Ready'), 3000);
+        }
     } catch (error) {
         console.error('Error saving lesson metadata:', error);
+        if (opts.skipRerender) throw error;
         alert('Error saving lesson metadata: ' + error.message);
     } finally {
-        nameInput.disabled = false;
-        setButtonLoading(btn, false);
+        if (nameInput) nameInput.disabled = false;
+        if (btn) setButtonLoading(btn, false);
     }
 }
 
@@ -3870,7 +4034,6 @@ async function showChaptersForLesson(lessonId) {
                 <div class="chapter-row" data-menu-id="${safeMenuIdAttr}">
                     <span class="chapter-menu-id">${ch.menuId}</span>
                     <input type="text" class="chapter-name-input" value="${safeDisplay}" data-original="${safeOriginal}" data-menu-id="${safeMenuIdAttr}">
-                    <button type="button" class="btn-section-save btn-chapter-save" onclick="saveChapterDisplayName('${lessonId.replace(/'/g, "\\'")}', '${menuIdEscaped}', this)">Save</button>
                 </div>`;
         }).join('');
 
@@ -3934,10 +4097,12 @@ async function saveChapterDisplayName(lessonId, menuId, btn) {
     }
 }
 
-async function saveAllChapters(lessonId, btn) {
+async function saveAllChapters(lessonId, btn, opts) {
+    opts = opts || {};
     try {
         requireAuth();
     } catch (error) {
+        if (opts.skipStatus) throw error;
         alert('Authentication required. Please log in again.');
         return;
     }
@@ -3945,15 +4110,15 @@ async function saveAllChapters(lessonId, btn) {
     if (!editList) return;
     const rows = editList.querySelectorAll('.chapter-row');
     if (!rows.length) {
-        setStatus('No chapters to save', 'error');
+        if (!opts.skipStatus) setStatus('No chapters to save', 'error');
         return;
     }
     const lesson = lessonsData.find(l => l.lessonId === lessonId);
     if (!lesson) return;
 
-    setButtonLoading(btn, true);
+    if (btn) setButtonLoading(btn, true);
     const metaRef = db.collection('lessonMetadata').doc(lessonId);
-    setStatus('Saving all chapters...', 'scanning');
+    if (!opts.skipStatus) setStatus('Saving all chapters...', 'scanning');
 
     const metaSnap = await metaRef.get();
     const existing = metaSnap.exists ? metaSnap.data() : {};
@@ -3990,10 +4155,12 @@ async function saveAllChapters(lessonId, btn) {
             chapterOrder,
             chapterMenuLabels,
         }, { merge: true });
-        setStatus(`Saved ${rows.length} chapters`, 'success');
-        setTimeout(() => setStatus('Ready'), 2000);
+        if (!opts.skipStatus) {
+            setStatus(`Saved ${rows.length} chapters`, 'success');
+            setTimeout(() => setStatus('Ready'), 2000);
+        }
     } finally {
-        setButtonLoading(btn, false);
+        if (btn) setButtonLoading(btn, false);
     }
 }
 
@@ -4668,10 +4835,12 @@ window.saveChapterDisplayName = saveChapterDisplayName;
 window.saveAllChapters = saveAllChapters;
 window.resetLessonAssignment = resetLessonAssignment;
 window.resetLessonForReattach = resetLessonForReattach;
-async function saveLessonPlaybackSettings(lessonId, btn) {
+async function saveLessonPlaybackSettings(lessonId, btn, opts) {
+    opts = opts || {};
     try {
         requireAuth();
     } catch (error) {
+        if (opts.skipStatus) throw error;
         alert('Authentication required. Please log in again.');
         return;
     }
@@ -4683,15 +4852,18 @@ async function saveLessonPlaybackSettings(lessonId, btn) {
             { forceFirstChapterStartAtZero: enabled },
             { merge: true }
         );
-        setStatus(
-            enabled
-                ? 'First chapter will start at 0:00 for this lesson'
-                : 'First chapter uses mapped timeline start again',
-            'success'
-        );
-        setTimeout(() => setStatus('Ready'), 2500);
+        if (!opts.skipStatus) {
+            setStatus(
+                enabled
+                    ? 'First chapter will start at 0:00 for this lesson'
+                    : 'First chapter uses mapped timeline start again',
+                'success'
+            );
+            setTimeout(() => setStatus('Ready'), 2500);
+        }
     } catch (err) {
         console.error('saveLessonPlaybackSettings failed:', err);
+        if (opts.skipStatus) throw err;
         setStatus('Failed to save playback settings: ' + err.message, 'error');
     } finally {
         if (btn) setButtonLoading(btn, false);
@@ -4700,22 +4872,26 @@ async function saveLessonPlaybackSettings(lessonId, btn) {
 
 window.saveLessonPlaybackSettings = saveLessonPlaybackSettings;
 window.regenerateSrcArrayFromYellow = regenerateSrcArrayFromYellow;
-window.saveSectionDisplayName = async function saveSectionDisplayName(originalSection, btn) {
+async function saveSectionDisplayName(originalSection, btn, opts) {
+    opts = opts || {};
     try {
         requireAuth();
     } catch (error) {
+        if (opts.skipRerender) throw error;
         alert('Authentication required. Please log in again.');
         return;
     }
 
     const inputId = `section-index-input-${originalSection.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
     const inputEl = document.getElementById(inputId);
-    if (!inputEl) {
+    const pending = pendingSectionDisplayNames[originalSection];
+    if (!inputEl && pending == null) {
+        if (opts.skipRerender) return;
         alert('Unable to find section input.');
         return;
     }
 
-    const newName = inputEl.value.trim();
+    const newName = (inputEl ? inputEl.value : pending).trim();
 
     // Find any lesson from this original section to compare effective name
     const anyLesson = lessonsData.find(l => l.originalSection === originalSection);
@@ -4723,13 +4899,15 @@ window.saveSectionDisplayName = async function saveSectionDisplayName(originalSe
     const hasChange = newName !== currentEffective;
 
     if (!hasChange) {
-        setStatus('No section changes to save', 'success');
-        setTimeout(() => setStatus('Ready'), 2000);
+        if (!opts.skipStatus) {
+            setStatus('No section changes to save', 'success');
+            setTimeout(() => setStatus('Ready'), 2000);
+        }
         return;
     }
 
-    setButtonLoading(btn, true);
-    inputEl.disabled = true;
+    if (btn) setButtonLoading(btn, true);
+    if (inputEl) inputEl.disabled = true;
 
     try {
         const sectionDocRef = db.collection('sectionNames').doc(originalSection);
@@ -4755,18 +4933,24 @@ window.saveSectionDisplayName = async function saveSectionDisplayName(originalSe
             }
         });
 
-        renderSidebarTree();
-        displaySelectedLesson();
-        setStatus('Section name saved', 'success');
-        setTimeout(() => setStatus('Ready'), 3000);
+        if (!opts.skipRerender) {
+            renderSidebarTree();
+            displaySelectedLesson();
+        }
+        if (!opts.skipStatus && !opts.skipRerender) {
+            setStatus('Section name saved', 'success');
+            setTimeout(() => setStatus('Ready'), 3000);
+        }
     } catch (error) {
         console.error('Error saving section display name:', error);
+        if (opts.skipRerender) throw error;
         alert('Error saving section display name: ' + error.message);
     } finally {
-        inputEl.disabled = false;
-        setButtonLoading(btn, false);
+        if (inputEl) inputEl.disabled = false;
+        if (btn) setButtonLoading(btn, false);
     }
-};
+}
+window.saveSectionDisplayName = saveSectionDisplayName;
 window.scrollToLesson = function scrollToLesson(lessonId) {
     selectLesson(lessonId);
 };

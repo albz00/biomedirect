@@ -16,6 +16,10 @@ var warnedInvalidSlide = {};
 var CONTENT_SEEK_LEAD_IN_SEC = 0.1;
 /** When skipping color-card intervals, land clearly after the detected end (seconds). */
 var COLOR_CARD_RANGE_SKIP_EPS_SEC = 0.1;
+/** Yellow/green has red "in front" when the next control card is red, or they touch. */
+var COLOR_CARD_ADJACENCY_SEC = 0.35;
+/** Minimum gap after splitting overlapping freeze cards that both stop. */
+var COLOR_CARD_SEPARATION_SEC = 0.08;
 /** @deprecated alias — use COLOR_CARD_RANGE_SKIP_EPS_SEC */
 var YELLOW_RANGE_SKIP_EPS_SEC = COLOR_CARD_RANGE_SKIP_EPS_SEC;
 /** Keep video continuous; timeline rows are chapter/navigation anchors. */
@@ -45,20 +49,13 @@ function menuLinksPlayFromZeroEnabled() {
 
 /* ==========================================================================
  * MARKER DEBUG OVERLAY (notifier + timeline strip) — DEBUG TOOLING ONLY.
- * Toggle with ?debugMarkers=1 in the URL or window.DEBUG_MARKERS = true.
- * Default OFF so production playback is unaffected. All DOM is built lazily
- * and self-styled (injected <style>), so no per-lesson HTML/CSS edits are
- * needed and the overlay works platform-wide via this shared file.
+ * Default OFF. Toggle live with Shift+D, or opt in via ?debugMarkers=1 /
+ * window.DEBUG_MARKERS = true. All DOM is built lazily and self-styled
+ * (injected <style>), so no per-lesson HTML/CSS edits are needed.
  * ========================================================================== */
 var markerDebugOverlayBuilt = false;
 var markerDebugEls = null;
 var markerDebugFlashTimer = null;
-
-/**
- * TEMP testing default: show the overlay WITHOUT needing the URL param.
- * Set to false to return to opt-in behavior (requires ?debugMarkers=1 / window.DEBUG_MARKERS).
- * Override at runtime with ?debugMarkers=0 or window.DEBUG_MARKERS = false.
- */
 var TEMP_MARKER_DEBUG_OVERLAY_DEFAULT_ON = false;
 
 function markerDebugOverlayEnabled() {
@@ -71,6 +68,50 @@ function markerDebugOverlayEnabled() {
         }
     } catch (e) { /* ignore */ }
     return TEMP_MARKER_DEBUG_OVERLAY_DEFAULT_ON === true;
+}
+
+function isMarkerDebugTypingContext(el) {
+    if (!el || !el.closest) return false;
+    return !!el.closest("input, textarea, select, [contenteditable='true'], [contenteditable='']");
+}
+
+function bindMarkerDebugVideoListeners() {
+    try {
+        if (typeof videoId === "undefined" || !videoId || videoId.__markerDebugMetaBound) return;
+        videoId.addEventListener("loadedmetadata", function () {
+            try { renderMarkerDebugStrip(); } catch (e) { /* ignore */ }
+        });
+        videoId.__markerDebugMetaBound = true;
+    } catch (e) { /* ignore */ }
+}
+
+function setMarkerDebugOverlayOn(on) {
+    if (typeof window !== "undefined") window.DEBUG_MARKERS = !!on;
+    if (!on) {
+        if (markerDebugEls && markerDebugEls.panel) markerDebugEls.panel.style.display = "none";
+        if (markerDebugEls && markerDebugEls.flash) {
+            markerDebugEls.flash.classList.remove("show");
+            markerDebugEls.flash.style.display = "none";
+        }
+        return;
+    }
+    if (markerDebugEls && markerDebugEls.flash) markerDebugEls.flash.style.display = "";
+    var els = ensureMarkerDebugOverlay();
+    if (els && els.panel) els.panel.style.display = "block";
+    try { renderMarkerDebugStrip(); } catch (e) { /* ignore */ }
+    bindMarkerDebugVideoListeners();
+}
+
+function bindMarkerDebugHotkey() {
+    if (typeof document === "undefined" || (typeof window !== "undefined" && window.__markerDebugHotkeyBound)) return;
+    document.addEventListener("keydown", function (e) {
+        if (!e || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+        if (!e.shiftKey || (e.key !== "D" && e.key !== "d")) return;
+        if (isMarkerDebugTypingContext(e.target)) return;
+        e.preventDefault();
+        setMarkerDebugOverlayOn(!markerDebugOverlayEnabled());
+    });
+    if (typeof window !== "undefined") window.__markerDebugHotkeyBound = true;
 }
 
 function injectMarkerDebugStyles() {
@@ -141,18 +182,7 @@ function ensureMarkerDebugOverlay() {
         flash: flash,
     };
     markerDebugOverlayBuilt = true;
-
-    if (typeof window !== "undefined" && !window.__markerDebugHotkeyBound) {
-        document.addEventListener("keydown", function (e) {
-            if (e && e.shiftKey && (e.key === "D" || e.key === "d")) {
-                if (markerDebugEls && markerDebugEls.panel) {
-                    var hidden = markerDebugEls.panel.style.display === "none";
-                    markerDebugEls.panel.style.display = hidden ? "block" : "none";
-                }
-            }
-        });
-        window.__markerDebugHotkeyBound = true;
-    }
+    bindMarkerDebugHotkey();
     return markerDebugEls;
 }
 
@@ -307,6 +337,8 @@ function pushMarkerDebugEvent(out) {
         markerDebugFlash(colorClass, label);
     }
 }
+
+bindMarkerDebugHotkey();
 
 /* ==========================================================================
  * COLOR-CARD MASK (rolling freeze-frame cover) — hides the brief color-card
@@ -1182,11 +1214,82 @@ function isTimeInsideFreezeMarkerCardSpan(t) {
 }
 
 /**
- * Leapfrog NON-STOP control cards (red loops + green pass-throughs). Yellow cards are genuine
- * stops and are handled via freeze-crossing + resolvePostFreezeStopTime (pause), so they are
- * intentionally NOT skipped here.
+ * Leapfrog nothing here. Red must stay visible to the loop trigger; yellow/green
+ * freezes are handled by stop vs partner-passthrough, not by skipping their ranges.
  */
 function ensureSeekPastRedCardRangesOnly(t) {
+    return t;
+}
+
+function colorCardSpansAdjacent(aStart, aEnd, bStart, bEnd) {
+    var as = Number(aStart), ae = Number(aEnd), bs = Number(bStart), be = Number(bEnd);
+    if (!isFinite(as) || !isFinite(ae) || !isFinite(bs) || !isFinite(be)) return false;
+    var eps = COLOR_CARD_ADJACENCY_SEC;
+    return as <= be + eps && bs <= ae + eps;
+}
+
+function nextControlCardAfterFreeze(mk) {
+    if (!mk) return { start: Infinity, type: null };
+    var yStart = Number(mk.start);
+    var nextStart = Infinity;
+    var nextType = null;
+    function consider(start, type, isSelf) {
+        var s = Number(start);
+        if (!isFinite(s) || isSelf) return;
+        if (s <= yStart + 1e-3) return;
+        if (s < nextStart) {
+            nextStart = s;
+            nextType = type;
+        }
+    }
+    for (var i = 0; i < freezeMarkers.length; i++) {
+        var fm = freezeMarkers[i];
+        consider(fm.start, fm.markerType, fm === mk);
+    }
+    for (var li = 0; li < loopMarkers.length; li++) {
+        consider(loopMarkers[li].start, "red", false);
+    }
+    return { start: nextStart, type: nextType };
+}
+
+/** True when this yellow/green has a red in front of it (next card is red, or they touch). */
+function freezeHasRedInFront(mk) {
+    if (!mk || (mk.markerType !== "yellow" && mk.markerType !== "green")) return false;
+    var next = nextControlCardAfterFreeze(mk);
+    if (next.type === "red") return true;
+    var ys = Number(mk.start), ye = Number(mk.end);
+    for (var j = 0; j < loopMarkers.length; j++) {
+        var r = loopMarkers[j];
+        if (Number(r.start) < ys - 0.05) continue;
+        if (colorCardSpansAdjacent(ys, ye, r.start, r.end)) return true;
+    }
+    return false;
+}
+
+function isYellowRangeAdjacentToAnyRed(yStart, yEnd) {
+    var ys = Number(yStart), ye = Number(yEnd);
+    if (!isFinite(ys) || !isFinite(ye)) return false;
+    for (var j = 0; j < loopMarkers.length; j++) {
+        var r = loopMarkers[j];
+        if (colorCardSpansAdjacent(ys, ye, r.start, r.end)) return true;
+    }
+    return false;
+}
+
+function isYellowImmediatelyFollowedByRed(mk) {
+    return freezeHasRedInFront(mk);
+}
+
+function isYellowPairedWithRed(mk) {
+    return freezeHasRedInFront(mk);
+}
+
+function isNonStopColorCardRange(r) {
+    return false;
+}
+
+/** Skip green / red / yellow-next-to-red cards. Do not skip a genuine yellow stop. */
+function ensureSeekPastNonStopColorCards(t) {
     var eps = COLOR_CARD_RANGE_SKIP_EPS_SEC;
     var cur = Number(t);
     if (!isFinite(cur)) return t;
@@ -1197,7 +1300,7 @@ function ensureSeekPastRedCardRangesOnly(t) {
         var moved = false;
         for (var i = 0; i < ranges.length; i++) {
             var r = ranges[i];
-            if (r.markerType === "yellow") continue; // yellow = stop, never leapfrogged
+            if (!isNonStopColorCardRange(r)) continue;
             if (cur >= r.start - 1e-4 && cur < r.end + eps) {
                 cur = r.end + eps;
                 moved = true;
@@ -1207,6 +1310,11 @@ function ensureSeekPastRedCardRangesOnly(t) {
         if (!moved) break;
     }
     return cur;
+}
+
+function seekJustPastMarkerCard(mk) {
+    if (!mk) return NaN;
+    return Number(mk.end) + COLOR_CARD_RANGE_SKIP_EPS_SEC;
 }
 
 /**
@@ -1260,36 +1368,43 @@ function applyRedCardLeapfrogDuringGuidedPlay(videoEl, t) {
  */
 function applyColorCardSafetyDuringGuidedPlay(videoEl, t) {
     if (!videoEl || !isFinite(Number(t))) return t;
+    if (guidedPlaybackState === "looping_at_red") return t;
     if (!isPlayingSegmentForward()) return t;
 
-    var afterLeapfrog = applyRedCardLeapfrogDuringGuidedPlay(videoEl, t);
-    if (Math.abs(Number(afterLeapfrog) - Number(t)) > 1e-5) {
-        return afterLeapfrog;
+    if (guidedPlaybackState === "playing_to_next_freeze") {
+        var c0 = Number(t);
+        for (var si = 0; si < freezeMarkers.length; si++) {
+            var stopMk = freezeMarkers[si];
+            if (!stopMk || !isStopFreezeMarker(stopMk)) continue;
+            var ss = Number(stopMk.start);
+            var se = Number(stopMk.end);
+            if (!isFinite(ss) || !isFinite(se)) continue;
+            if (c0 >= ss - 1e-4 && c0 <= se + COLOR_CARD_RANGE_SKIP_EPS_SEC) {
+                logPlayerMarkerDebug({
+                    event: "color_card_safety_freeze_backstop",
+                    freezeStopFired: true,
+                    leapfrogApplied: true,
+                    markerType: stopMk.markerType,
+                    markerIndex: si,
+                    insideSpanStop: true,
+                    previousTime: Math.round(c0 * 1000) / 1000,
+                });
+                applyFreezeMarkerStopAtCrossing(videoEl, stopMk, si, t, t, "color_card_safety_inside_freeze_span");
+                return t;
+            }
+        }
     }
 
     if (guidedPlaybackState !== "playing_to_next_freeze") return t;
     var c = Number(t);
     for (var i = 0; i < freezeMarkers.length; i++) {
         var mk = freezeMarkers[i];
-        if (!mk) continue;
+        if (!mk || isStopFreezeMarker(mk)) continue;
+        if (!mk.insideRedLoop) continue;
         var s = Number(mk.start);
         var e = Number(mk.end);
         if (!isFinite(s) || !isFinite(e)) continue;
         if (c >= s - 1e-4 && c <= e + COLOR_CARD_RANGE_SKIP_EPS_SEC) {
-            if (isStopFreezeMarker(mk)) {
-                logPlayerMarkerDebug({
-                    event: "color_card_safety_freeze_backstop",
-                    freezeStopFired: true,
-                    leapfrogApplied: true,
-                    markerType: mk.markerType,
-                    markerIndex: i,
-                    insideSpanStop: true,
-                    previousTime: Math.round(c * 1000) / 1000,
-                });
-                applyFreezeMarkerStopAtCrossing(videoEl, mk, i, t, t, "color_card_safety_inside_freeze_span");
-                return t;
-            }
-            // pass-through (green or yellow-in-red): leapfrog and keep playing.
             handleGreenPassthroughEvent(videoEl, { marker: mk, freezeMarkerIndex: i }, c, c);
             return Number(videoEl.currentTime);
         }
@@ -1372,6 +1487,125 @@ function buildLoopMarkerFromRange(row, markerIndex, previousFreezeIdx) {
     };
 }
 
+function clipFreezeMarkerSpan(mk, newStart, newEnd) {
+    var s = Number(newStart);
+    var e = Number(newEnd);
+    if (!isFinite(s) || !isFinite(e) || e <= s + 0.04) return false;
+    mk.start = s;
+    mk.end = e;
+    if (!isFinite(Number(mk.crossAt)) || Number(mk.crossAt) < s || Number(mk.crossAt) > e) {
+        mk.crossAt = s;
+    }
+    mk.freezeTime = s;
+    return true;
+}
+
+/**
+ * Yellow-stop and green cards that share a span clip into each other (especially near the
+ * end of a lesson). Split them so a yellow stop lands on clean content, then the green
+ * can pass through on the next click. Do not pull a yellow-red pair apart.
+ */
+function freezeMarkerRankForOverlap(mk) {
+    if (!mk) return 9;
+    if (mk.markerType === "yellow" && !mk.insideRedLoop) return 0;
+    if (mk.markerType === "green") return 1;
+    return 2;
+}
+
+function sequentializeOverlappingFreezePair(earlier, later) {
+    var gap = COLOR_CARD_SEPARATION_SEC;
+    var a0 = Number(earlier.start);
+    var a1 = Number(earlier.end);
+    var b0 = Number(later.start);
+    var b1 = Number(later.end);
+    if (!isFinite(a0) || !isFinite(a1) || !isFinite(b0) || !isFinite(b1)) return false;
+    var unionStart = Math.min(a0, b0);
+    var unionEnd = Math.max(a1, b1);
+    if (unionEnd - unionStart < 0.12) return false;
+    var mid = unionStart + (unionEnd - unionStart) * 0.5;
+    if (!clipFreezeMarkerSpan(earlier, unionStart, Math.max(unionStart + 0.06, mid))) return false;
+    if (!clipFreezeMarkerSpan(later, Math.min(unionEnd - 0.06, mid + gap), unionEnd)) return false;
+    return true;
+}
+
+function disentangleOverlappingFreezeMarkers() {
+    if (!freezeMarkers.length) return;
+    var gap = COLOR_CARD_SEPARATION_SEC;
+    freezeMarkers.sort(function(a, b) {
+        var ds = Number(a.start) - Number(b.start);
+        if (Math.abs(ds) > 1e-4) return ds;
+        return freezeMarkerRankForOverlap(a) - freezeMarkerRankForOverlap(b);
+    });
+    var kept = [];
+    for (var i = 0; i < freezeMarkers.length; i++) {
+        var cur = freezeMarkers[i];
+        if (!cur) continue;
+        var prev = kept.length ? kept[kept.length - 1] : null;
+        if (!prev) {
+            kept.push(cur);
+            continue;
+        }
+        var overlap = Number(cur.start) < Number(prev.end) + gap;
+        if (!overlap) {
+            kept.push(cur);
+            continue;
+        }
+        var prevPaired = prev.markerType === "yellow" && prev.insideRedLoop;
+        var curPaired = cur.markerType === "yellow" && cur.insideRedLoop;
+        var prevStop = prev.markerType === "yellow" && !prev.insideRedLoop;
+        var curStop = cur.markerType === "yellow" && !cur.insideRedLoop;
+
+        // Stacked yellow-stop + green: sequentialize so they no longer share one span.
+        if ((prevStop && cur.markerType === "green") || (prev.markerType === "green" && curStop)) {
+            var earlier = freezeMarkerRankForOverlap(prev) <= freezeMarkerRankForOverlap(cur) ? prev : cur;
+            var later = earlier === prev ? cur : prev;
+            if (earlier !== prev) {
+                kept.pop();
+                if (!sequentializeOverlappingFreezePair(earlier, later)) {
+                    kept.push(earlier);
+                    continue;
+                }
+                kept.push(earlier);
+                kept.push(later);
+                continue;
+            }
+            if (!sequentializeOverlappingFreezePair(prev, cur)) continue;
+            kept.push(cur);
+            continue;
+        }
+
+        // Paired yellow next to red: keep the yellow intact so the loop can still fire.
+        if (prevPaired && cur.markerType === "green") {
+            if (!clipFreezeMarkerSpan(cur, Number(prev.end) + gap, Math.max(Number(cur.end), Number(prev.end) + gap + 0.12))) {
+                continue;
+            }
+            kept.push(cur);
+            continue;
+        }
+        if (curPaired && prev.markerType === "green") {
+            if (!clipFreezeMarkerSpan(prev, Number(prev.start), Number(cur.start) - gap)) {
+                kept.pop();
+            }
+            kept.push(cur);
+            continue;
+        }
+
+        if (prev.markerType === cur.markerType) {
+            if (!sequentializeOverlappingFreezePair(prev, cur)) continue;
+            kept.push(cur);
+            continue;
+        }
+        kept.push(cur);
+    }
+    freezeMarkers = kept;
+}
+
+function reindexLoopPreviousFreezeAnchors() {
+    for (var i = 0; i < loopMarkers.length; i++) {
+        loopMarkers[i].previousFreezeMarkerIndex = findPreviousFreezeMarkerIndexBeforeTime(loopMarkers[i].start);
+    }
+}
+
 function findPreviousFreezeMarkerIndexBeforeTime(t) {
     var best = -1;
     for (var i = 0; i < freezeMarkers.length; i++) {
@@ -1392,7 +1626,6 @@ function findFirstFreezeMarkerIndexAfterTime(t) {
 
 /**
  * The time span a red marker loops over: from its loop-return anchor (previous freeze) to the red.
- * Yellows sitting inside this span are pass-throughs so the loop replays smoothly.
  */
 function getRedLoopSpanForMarker(loopMk) {
     if (!loopMk) return null;
@@ -1406,26 +1639,15 @@ function getRedLoopSpanForMarker(loopMk) {
     return { startTime: startTime, endTime: endTime };
 }
 
-/** A yellow whose crossAt falls within any red's loop span [anchor, red) -> pass-through. */
-function isYellowInsideAnyRedLoop(mk) {
-    if (!mk || mk.markerType !== "yellow") return false;
-    var y = Number(mk.crossAt);
-    if (!isFinite(y)) return false;
-    for (var i = 0; i < loopMarkers.length; i++) {
-        var span = getRedLoopSpanForMarker(loopMarkers[i]);
-        if (!span) continue;
-        if (y >= span.startTime - 1e-4 && y < span.endTime - 1e-4) return true;
-    }
-    return false;
+/** Yellow/green with no red in front = freeze. Same card with red in front = loop partner, not a stop. */
+function isYellowAdjacentToAnyRed(mk) {
+    return freezeHasRedInFront(mk);
 }
 
-/**
- * Only YELLOW markers OUTSIDE any red loop are genuine stops. GREEN markers, and yellows that fall
- * inside a red loop span, are pass-throughs: leapfrog the card and keep playing (greens/anchored
- * yellows remain in freezeMarkers as red loop anchors and future menu anchors).
- */
 function isStopFreezeMarker(mk) {
-    return !!(mk && mk.markerType === "yellow" && !mk.insideRedLoop);
+    if (!mk) return false;
+    if (mk.markerType !== "yellow" && mk.markerType !== "green") return false;
+    return !mk.insideRedLoop;
 }
 
 /** Next genuine STOP (yellow) boundary strictly after playhead time — the real segment target. */
@@ -1453,33 +1675,43 @@ function findPreviousStopMarkerIndexBeforeTime(t) {
 }
 
 /**
- * GREEN pass-through: leapfrog the green card and KEEP PLAYING (no pause, no state change).
- * Advances the guided cursor toward the active yellow stop target so the next event is picked up.
+ * Partner freeze (yellow/green with red in front): skip only this card so playback
+ * can reach the red and loop. Never skip the red.
  */
 function handleGreenPassthroughEvent(videoEl, ev, prev, t) {
     var mk = ev && ev.marker ? ev.marker : null;
     if (!mk) return;
-    var past = ensureSeekPastColorCardRanges(Number(mk.end) + COLOR_CARD_RANGE_SKIP_EPS_SEC);
+    var past = seekJustPastMarkerCard(mk);
+    var redStart = Infinity;
+    for (var li = 0; li < loopMarkers.length; li++) {
+        var rs = Number(loopMarkers[li].start);
+        if (isFinite(rs) && rs >= Number(mk.start) - 0.05 && rs < redStart) redStart = rs;
+    }
+    if (isFinite(redStart) && isFinite(Number(past)) && Number(past) >= redStart - 1e-4) {
+        past = Math.max(Number(t), redStart - 0.04);
+    }
     logPlayerMarkerDebug({
-        event: "green_passthrough_leapfrog",
+        event: "partner_freeze_keep_playing",
         leapfrogApplied: true,
         leapfrogHelperUsed: true,
-        markerType: mk.markerType || "green",
+        markerType: mk.markerType || "yellow",
         markerSemantics: "freeze",
         markerIndex: ev.freezeMarkerIndex,
         previousTime: isFinite(Number(prev)) ? Math.round(Number(prev) * 1000) / 1000 : null,
         chosenStopPoint: isFinite(Number(mk.crossAt)) ? Math.round(Number(mk.crossAt) * 1000) / 1000 : null,
         chosenResumeTarget: isFinite(Number(past)) ? Math.round(Number(past) * 1000) / 1000 : null,
-        clickAction: "green_keep_playing",
+        clickAction: "play_into_red_loop",
     });
-    if (isFinite(Number(past)) && Number(past) > Number(videoEl.currentTime)) {
+    if (isFinite(Number(past)) && Number(past) > Number(videoEl.currentTime) + 1e-4) {
         videoEl.currentTime = Number(past);
     }
     advanceMarkerCursorToTime(Number(videoEl.currentTime));
     if (segmentTargetFreezeIdx >= 0 && segmentTargetFreezeIdx < freezeMarkers.length) {
         guidedTargetEventIdx = findNextSegmentPlaybackEventIdx(Number(videoEl.currentTime), segmentTargetFreezeIdx);
+    } else {
+        guidedTargetEventIdx = findNextSegmentPlaybackEventIdx(Number(videoEl.currentTime), -1);
     }
-    lastPlaybackTimeForMarkerCheck = Number(videoEl.currentTime);
+    lastPlaybackTimeForMarkerCheck = isFinite(Number(prev)) ? Number(prev) : Number(videoEl.currentTime);
     syncLegacyYellowMarkerAliases();
 }
 
@@ -1558,10 +1790,17 @@ function loadPlaybackMarkersFromWindow() {
     loopMarkers.sort(function(a, b) { return a.crossAt - b.crossAt; });
     for (var lr = 0; lr < loopMarkers.length; lr++) loopMarkers[lr].markerIndex = lr;
 
-    // A yellow inside a red's loop span is a pass-through (acts like green), not a genuine stop.
+    // Yellow/green with a red in front is a loop partner (not a stop).
     for (var pf = 0; pf < freezeMarkers.length; pf++) {
-        freezeMarkers[pf].insideRedLoop = isYellowInsideAnyRedLoop(freezeMarkers[pf]);
+        freezeMarkers[pf].insideRedLoop = freezeHasRedInFront(freezeMarkers[pf]);
     }
+    disentangleOverlappingFreezeMarkers();
+    freezeMarkers.sort(function(a, b) { return a.crossAt - b.crossAt; });
+    for (var fr2 = 0; fr2 < freezeMarkers.length; fr2++) freezeMarkers[fr2].markerIndex = fr2;
+    for (var pf2 = 0; pf2 < freezeMarkers.length; pf2++) {
+        freezeMarkers[pf2].insideRedLoop = freezeHasRedInFront(freezeMarkers[pf2]);
+    }
+    reindexLoopPreviousFreezeAnchors();
 
     // Build the green->menu seek lookup. A saved chapter selection IS the link: any entry with a
     // finite seekTime routes its menu click. byMenuId only holds rows where a chapter was selected,
@@ -1708,16 +1947,18 @@ function findFreezeFrameIndexAtTime(t) {
 }
 
 function findNextSegmentPlaybackEventIdx(t, targetFreezeIdx) {
-    if (targetFreezeIdx < 0 || targetFreezeIdx >= freezeMarkers.length) return -1;
-    var targetCross = Number(freezeMarkers[targetFreezeIdx].crossAt);
-    if (!isFinite(targetCross)) return -1;
-    for (var i = nextPlaybackEventIdx; i < playbackEvents.length; i++) {
+    var targetCross = Infinity;
+    if (targetFreezeIdx >= 0 && targetFreezeIdx < freezeMarkers.length) {
+        targetCross = Number(freezeMarkers[targetFreezeIdx].crossAt);
+        if (!isFinite(targetCross)) return -1;
+    }
+    for (var i = 0; i < playbackEvents.length; i++) {
         var ev = playbackEvents[i];
         var cross = Number(ev.crossAt);
         if (!isFinite(cross) || cross < Number(t) - 1e-4) continue;
-        if (cross > targetCross + 1e-4) break;
+        if (isFinite(targetCross) && targetCross !== Infinity && cross > targetCross + 1e-4) break;
         if (ev.kind === "loop") return i;
-        if (ev.kind === "freeze") return i;
+        if (ev.kind === "freeze" && isStopFreezeMarker(ev.marker)) return i;
     }
     return -1;
 }
@@ -1840,14 +2081,41 @@ function beginPlayToNextFreezeFrame(reason) {
     if (fromIdx < 0) {
         fromIdx = findPreviousFreezeMarkerIndexBeforeTime(t + 0.001);
     }
-    // Segment target is the next genuine STOP (yellow). Greens between here and there are
-    // pass-throughs that leapfrog and keep playing; reds between trigger loops.
+    // Segment target is the next genuine STOP (yellow/green with no red in front).
+    // A freeze with red in front is the loop partner; reds between trigger the GIF loop.
     var nextIdx = findFirstStopMarkerIndexAfterTime(t);
     currentFreezeFrameIdx = fromIdx;
     pausedAtFreezeMarkerIdx = -1;
     syncLegacyYellowMarkerAliases();
 
     if (nextIdx < 0 || nextIdx >= freezeMarkers.length) {
+        var loopEvIdx = -1;
+        for (var lei = 0; lei < playbackEvents.length; lei++) {
+            var loopEv = playbackEvents[lei];
+            if (!loopEv || loopEv.kind !== "loop") continue;
+            if (Number(loopEv.crossAt) > Number(t) + 1e-4) {
+                loopEvIdx = lei;
+                break;
+            }
+        }
+        if (loopEvIdx >= 0) {
+            segmentTargetFreezeIdx = -1;
+            nextFreezeFrameIdx = -1;
+            activeRedLoopEventIdx = -1;
+            activeRedLoopReturnTime = null;
+            activeRedLoopPreviousFreezeIdx = -1;
+            guidedTargetEventIdx = loopEvIdx;
+            setGuidedPlaybackState("playing_to_next_freeze", reason || "play_into_trailing_red_loop");
+            logPlayerMarkerDebug({
+                event: "play_segment_into_trailing_red_loop",
+                reason: reason || null,
+                currentFreezeFrameIndex: currentFreezeFrameIdx,
+                guidedTargetEventIndex: guidedTargetEventIdx,
+                clickAction: "play_current_freeze_to_red_loop",
+            });
+            syncLegacyYellowMarkerAliases();
+            return;
+        }
         segmentTargetFreezeIdx = -1;
         nextFreezeFrameIdx = -1;
         guidedTargetEventIdx = -1;
@@ -1890,10 +2158,8 @@ function beginPlayToNextFreezeFrame(reason) {
 }
 
 /**
- * BACK button: teleport to the previous yellow/green freeze anchor and resume the existing play
- * logic (greens / yellow-in-red pass through, a red ahead loops, stops at the next genuine yellow).
- * No forced pause. Repeated presses step backward one anchor at a time; before the first anchor it
- * restarts the lesson at 0.
+ * BACK button: one genuine yellow stop at a time, same granularity as clicking forward.
+ * Does not jump to greens, does not skip extra yellows, and does not start playback.
  */
 function goBackToPreviousFreezeAndPlay(reason) {
     if (!CONTINUOUS_VIDEO_PLAYBACK || typeof videoId === "undefined" || !videoId) {
@@ -1906,49 +2172,51 @@ function goBackToPreviousFreezeAndPlay(reason) {
     }
     var t = Number(videoId.currentTime);
     if (!isFinite(t)) t = 0;
-    // Anchor we are currently on (segment start / paused freeze / loop anchor).
-    var anchor = pausedAtFreezeMarkerIdx >= 0
-        ? pausedAtFreezeMarkerIdx
-        : (currentFreezeFrameIdx >= 0 ? currentFreezeFrameIdx : findPreviousFreezeMarkerIndexBeforeTime(t + 0.05));
-    var backIdx = anchor - 1; // the previous yellow/green frame
+    var searchT = t;
+    var sittingOnStop = pausedAtFreezeMarkerIdx >= 0
+        && pausedAtFreezeMarkerIdx < freezeMarkers.length
+        && isStopFreezeMarker(freezeMarkers[pausedAtFreezeMarkerIdx]);
+    if (sittingOnStop) {
+        searchT = Number(freezeMarkers[pausedAtFreezeMarkerIdx].crossAt);
+    } else if (guidedPlaybackState === "paused_at_freeze" && currentFreezeFrameIdx >= 0
+        && currentFreezeFrameIdx < freezeMarkers.length
+        && isStopFreezeMarker(freezeMarkers[currentFreezeFrameIdx])) {
+        searchT = Number(freezeMarkers[currentFreezeFrameIdx].crossAt);
+    }
 
-    // Clear any active loop / pause so the teleport starts clean.
     activeRedLoopEventIdx = -1;
     activeRedLoopReturnTime = null;
     activeRedLoopPreviousFreezeIdx = -1;
-    pausedAtFreezeMarkerIdx = -1;
 
+    var backIdx = findPreviousStopMarkerIndexBeforeTime(searchT);
     if (backIdx < 0) {
         currentFreezeFrameIdx = -1;
+        pausedAtFreezeMarkerIdx = -1;
+        segmentTargetFreezeIdx = -1;
+        nextFreezeFrameIdx = -1;
+        guidedTargetEventIdx = -1;
         syncVideoSeekWithMarkerState(videoId, 0, reason || "back_to_start");
-        beginPlayToNextFreezeFrame(reason || "back_to_start");
+        try { videoId.pause(); } catch (e) { console.log(e); }
+        setGuidedPlaybackState("idle", reason || "back_to_start");
         logPlayerMarkerDebug({
             event: "back_to_prev_freeze",
             clickBranchTaken: "back_to_lesson_start",
             chosenResumePoint: 0,
-            clickAction: "back_teleport_and_play",
+            clickAction: "back_step_to_prev_yellow_stop",
         });
-        try { videoId.play(); } catch (e) { console.log(e); }
         return;
     }
 
     var mk = freezeMarkers[backIdx];
-    var resume = resolvePostFreezeStopTime(mk, backIdx, reason || "back_to_prev_freeze");
-    currentFreezeFrameIdx = backIdx;
-    if (isFinite(Number(resume))) {
-        syncVideoSeekWithMarkerState(videoId, Number(resume), reason || "back_to_prev_freeze");
-    }
-    beginPlayToNextFreezeFrame(reason || "back_to_prev_freeze");
+    applyFreezeMarkerStopAtCrossing(videoId, mk, backIdx, t, t, reason || "back_to_prev_freeze");
     logPlayerMarkerDebug({
         event: "back_to_prev_freeze",
-        clickBranchTaken: "back_to_previous_anchor",
+        clickBranchTaken: "back_to_previous_yellow_stop",
         markerType: mk ? mk.markerType : null,
         markerSemantics: "freeze",
         markerIndex: backIdx,
-        chosenResumePoint: isFinite(Number(resume)) ? Math.round(Number(resume) * 1000) / 1000 : null,
-        clickAction: "back_teleport_and_play",
+        clickAction: "back_step_to_prev_yellow_stop",
     });
-    try { videoId.play(); } catch (e2) { console.log(e2); }
 }
 
 function beginPlayToNextEvent(reason) {
@@ -1986,7 +2254,8 @@ function nearestPlaybackEventInfoAtTime(t) {
 
 function resolvePostFreezeStopTime(marker, markerIndex, logReason) {
     if (!marker) return null;
-    var base = Number(marker.end) + COLOR_CARD_RANGE_SKIP_EPS_SEC;
+    var base = seekJustPastMarkerCard(marker);
+    if (!isFinite(Number(base))) base = Number(marker.end) + COLOR_CARD_RANGE_SKIP_EPS_SEC;
     if (marker.markerType === "green") {
         if (marker.resumeTime != null && isFinite(Number(marker.resumeTime)) &&
             Number(marker.resumeTime) >= marker.end) {
@@ -2000,11 +2269,22 @@ function resolvePostFreezeStopTime(marker, markerIndex, logReason) {
         Number(marker.contentStart) > marker.end) {
         base = Number(marker.contentStart);
     }
-    var resolved = ensureSeekPastColorCardRanges(base);
-    if (marker.markerType === "green" && isFinite(Number(marker.start)) && isFinite(Number(marker.end))) {
-        var pastGreenSpan = Number(marker.end) + COLOR_CARD_RANGE_SKIP_EPS_SEC;
-        if (resolved < pastGreenSpan) resolved = pastGreenSpan;
-        resolved = ensureSeekPastColorCardRanges(resolved);
+    var resolved = base;
+    if (marker.markerType === "green") {
+        resolved = ensureSeekPastNonStopColorCards(base);
+        var pastGreenSpan = seekJustPastMarkerCard(marker);
+        if (isFinite(Number(pastGreenSpan)) && resolved < pastGreenSpan) resolved = pastGreenSpan;
+    } else if (marker.markerType === "yellow" && isStopFreezeMarker(marker)) {
+        // Don't land inside a green that was stacked on this yellow stop.
+        for (var gi = 0; gi < freezeMarkers.length; gi++) {
+            var gmk = freezeMarkers[gi];
+            if (!gmk || gmk.markerType !== "green") continue;
+            if (Number(gmk.start) <= Number(marker.end) + 0.25 &&
+                Number(gmk.end) > Number(marker.start) - 0.25) {
+                var pastGreen = Number(gmk.end) + COLOR_CARD_RANGE_SKIP_EPS_SEC;
+                if (pastGreen > resolved) resolved = pastGreen;
+            }
+        }
     }
     var leapfrogAdjusted = Math.abs(resolved - base) > 1e-6;
     // "locate_freeze_at_time" is a pure read-only locator that runs for EVERY freeze marker on
@@ -2049,21 +2329,32 @@ function resolvePostYellowStopTime(marker, markerIndex, logReason) {
 
 function getLoopReturnTimeForRedMarker(loopMarker) {
     if (!loopMarker) return null;
+    var redAt = Number(loopMarker.crossAt);
+    if (!isFinite(redAt)) redAt = Number(loopMarker.start);
     var prevIdx = loopMarker.previousFreezeMarkerIndex;
-    if (prevIdx < 0 || prevIdx >= freezeMarkers.length) {
-        var resolvedFallback = ensureSeekPastColorCardRanges(loopMarker.start);
-        logPlayerMarkerDebug({
-            event: "loop_return_no_previous_freeze",
-            markerType: "red",
-            markerSemantics: "loop",
-            markerIndex: loopMarker.markerIndex,
-            previousFreezeMarkerIndex: prevIdx,
-            chosenResumePoint: Math.round(Number(resolvedFallback) * 1000) / 1000,
-            clickAction: "break_loop_on_click",
-        });
-        return resolvedFallback;
+    var ret = NaN;
+    if (prevIdx >= 0 && prevIdx < freezeMarkers.length) {
+        var anchor = freezeMarkers[prevIdx];
+        ret = seekJustPastMarkerCard(anchor);
+        if (anchor && anchor.contentStart != null && isFinite(Number(anchor.contentStart)) &&
+            Number(anchor.contentStart) > Number(anchor.end) &&
+            Number(anchor.contentStart) < redAt - 1e-4) {
+            ret = Number(anchor.contentStart);
+        }
     }
-    return resolvePostFreezeStopTime(freezeMarkers[prevIdx], prevIdx, "red_loop_return");
+    if (!isFinite(Number(ret))) ret = 0;
+    // The GIF must restart BEFORE the red. If the partner card sits on the red,
+    // fall back to the previous real freeze so we loop the content, not a one-frame skip.
+    if (!isFinite(redAt) || Number(ret) >= redAt - 0.05) {
+        var stopIdx = findPreviousStopMarkerIndexBeforeTime(isFinite(redAt) ? redAt : 0);
+        if (stopIdx >= 0 && stopIdx < freezeMarkers.length) {
+            ret = seekJustPastMarkerCard(freezeMarkers[stopIdx]);
+        }
+    }
+    if (isFinite(redAt) && Number(ret) >= redAt - 0.05) {
+        ret = Math.max(0, redAt - 0.12);
+    }
+    return Number(ret);
 }
 
 /**
@@ -2294,17 +2585,13 @@ function initializePlayer(videoUrl, timelineArray) {
         });
     } catch (diagErr) { /* diagnostics must never break init */ }
 
-    // Marker debug overlay (notifier + timeline strip), only when ?debugMarkers=1 / window.DEBUG_MARKERS.
+    // Marker debug overlay (notifier + timeline strip). Off unless Shift+D /
+    // ?debugMarkers=1 / window.DEBUG_MARKERS. Hotkey is bound at script load.
     if (markerDebugOverlayEnabled()) {
         try {
             ensureMarkerDebugOverlay();
             renderMarkerDebugStrip();
-            if (typeof videoId !== "undefined" && videoId && !videoId.__markerDebugMetaBound) {
-                videoId.addEventListener("loadedmetadata", function () {
-                    try { renderMarkerDebugStrip(); } catch (e) { /* ignore */ }
-                });
-                videoId.__markerDebugMetaBound = true;
-            }
+            bindMarkerDebugVideoListeners();
         } catch (overlayErr) { /* overlay must never break init */ }
     }
 
@@ -2323,18 +2610,31 @@ function initializePlayer(videoUrl, timelineArray) {
         var backBtn = document.getElementById("btnBack");
         if (backBtn && !backBtn.__interactiveBackBound) {
             backBtn.addEventListener("click", function (evt) {
-                if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
+                if (evt && typeof evt.preventDefault === "function") evt.preventDefault();
+                if (evt && typeof evt.stopImmediatePropagation === "function") evt.stopImmediatePropagation();
+                else if (evt && typeof evt.stopPropagation === "function") evt.stopPropagation();
                 goBackToPreviousFreezeAndPlay("back_button_click");
-            });
+            }, true);
             backBtn.__interactiveBackBound = true;
         }
-        // Record which menu button was clicked (capture phase, before per-lesson handlers set
-        // currentSlide) so updateVideoId can route a confirmed green->menu link to its timestamp.
+        // Route every lesson-menu button in capture phase. This keeps chapter
+        // navigation working even if an older/missing lesson-specific script
+        // never attached its own handler.
         var menuPage = document.getElementById("lessonMenuPage");
         if (menuPage && !menuPage.__menuMapBound) {
             menuPage.addEventListener("click", function (evt) {
                 var btn = evt && evt.target && evt.target.closest ? evt.target.closest("button[id^='menu']") : null;
                 lastClickedMenuId = btn && btn.id ? btn.id : null;
+                if (!lastClickedMenuId) return;
+
+                var mappedSlides = window.menuToSlideIndex || {};
+                var mappedSlide = mappedSlides[lastClickedMenuId];
+                var menuNumber = Number(lastClickedMenuId.replace(/^menu/, ""));
+                var fallbackSlide = Number.isFinite(menuNumber) && menuNumber > 0 ? menuNumber - 1 : 0;
+                currentSlide = typeof mappedSlide === "number" && mappedSlide >= 0
+                    ? mappedSlide
+                    : fallbackSlide;
+                clickedLink = true;
             }, true);
             menuPage.__menuMapBound = true;
         }
@@ -2398,7 +2698,13 @@ function initializePlayer(videoUrl, timelineArray) {
             if (guidedPlaybackState === "playing_to_next_freeze" &&
                 (segmentTargetFreezeIdx < 0 || segmentTargetFreezeIdx >= freezeMarkers.length) &&
                 freezeMarkers.length > 0) {
-                beginPlayToNextFreezeFrame("missing_segment_target_rearm");
+                var aimingLoop = guidedTargetEventIdx >= 0 &&
+                    guidedTargetEventIdx < playbackEvents.length &&
+                    playbackEvents[guidedTargetEventIdx] &&
+                    playbackEvents[guidedTargetEventIdx].kind === "loop";
+                if (!aimingLoop) {
+                    beginPlayToNextFreezeFrame("missing_segment_target_rearm");
+                }
             }
             if (PAUSE_AT_FREEZE_MARKERS && playbackEvents.length > 0) {
                 var prev = Number(lastPlaybackTimeForMarkerCheck);
@@ -2414,28 +2720,23 @@ function initializePlayer(videoUrl, timelineArray) {
                     }
                 }
 
-                t = applyColorCardSafetyDuringGuidedPlay(this, t);
-                if (Math.abs(Number(this.currentTime) - Number(t)) > 1e-5) {
-                    lastPlaybackTimeForMarkerCheck = Number(this.currentTime);
-                    return;
-                }
-
                 if (guidedPlaybackState === "looping_at_red" && activeRedLoopEventIdx >= 0 &&
                     activeRedLoopReturnTime != null && isFinite(Number(activeRedLoopReturnTime))) {
                     var loopMkActive = loopMarkers[activeRedLoopEventIdx];
-                    // Jump back at the red's START (consistent with handleRedLoopMarkerCrossing on
-                    // entry) so the red card is never played; the mask cover hides the single-frame jump.
                     var redLoopBoundary = loopMkActive ? Number(loopMkActive.crossAt) : NaN;
-                    if (loopMkActive && isFinite(redLoopBoundary) && prev < redLoopBoundary && t >= redLoopBoundary) {
-                        this.currentTime = Number(activeRedLoopReturnTime);
-                        lastPlaybackTimeForMarkerCheck = Number(activeRedLoopReturnTime);
+                    var loopReturnAt = Number(activeRedLoopReturnTime);
+                    if (loopMkActive && isFinite(redLoopBoundary) && isFinite(loopReturnAt) &&
+                        Number(t) >= redLoopBoundary - 1e-4 &&
+                        Math.abs(Number(t) - loopReturnAt) > 0.02) {
+                        this.currentTime = loopReturnAt;
+                        lastPlaybackTimeForMarkerCheck = loopReturnAt;
                         logPlayerMarkerDebug({
                             event: "red_loop_repeat",
                             markerType: "red",
                             markerSemantics: "loop",
                             markerIndex: activeRedLoopEventIdx,
                             previousFreezeMarkerIndex: activeRedLoopPreviousFreezeIdx,
-                            chosenResumePoint: Math.round(Number(activeRedLoopReturnTime) * 1000) / 1000,
+                            chosenResumePoint: Math.round(loopReturnAt * 1000) / 1000,
                             clickAction: "break_loop_on_click",
                         });
                         return;
@@ -2453,6 +2754,31 @@ function initializePlayer(videoUrl, timelineArray) {
                         }
                     }
                     advancePastSkippedFreezeEventsInSegment(t);
+                }
+
+                if (guidedPlaybackState === "playing_to_next_freeze" &&
+                    guidedTargetEventIdx >= 0 &&
+                    guidedTargetEventIdx < playbackEvents.length) {
+                    var evEarly = playbackEvents[guidedTargetEventIdx];
+                    var triggerEarly = classifyGuidedEventTrigger(evEarly, prev, t);
+                    if (triggerEarly.shouldFire && evEarly.kind === "loop") {
+                        handleRedLoopMarkerCrossing(this, evEarly.marker, evEarly.loopMarkerIndex, prev, t);
+                        return;
+                    }
+                    if (triggerEarly.shouldFire && evEarly.kind === "freeze" && isStopFreezeMarker(evEarly.marker)) {
+                        applyFreezeMarkerStopAtCrossing(this, evEarly.marker, evEarly.freezeMarkerIndex, prev, t, "autoplay_freeze_crossing");
+                        return;
+                    }
+                    if (triggerEarly.reason === "stale_target_already_past_marker" && evEarly.kind === "loop") {
+                        handleRedLoopMarkerCrossing(this, evEarly.marker, evEarly.loopMarkerIndex, prev, t);
+                        return;
+                    }
+                }
+
+                t = applyColorCardSafetyDuringGuidedPlay(this, t);
+                if (Math.abs(Number(this.currentTime) - Number(t)) > 1e-5) {
+                    lastPlaybackTimeForMarkerCheck = Number(this.currentTime);
+                    return;
                 }
 
                 if (guidedPlaybackState === "playing_to_next_freeze" &&
@@ -2481,6 +2807,11 @@ function initializePlayer(videoUrl, timelineArray) {
                                 applyFreezeMarkerStopAtCrossing(this, ev.marker, ev.freezeMarkerIndex, prev, t, "autoplay_freeze_crossing");
                                 return;
                             }
+                            if (ev.marker && ev.marker.insideRedLoop) {
+                                guidedTargetEventIdx = findNextSegmentPlaybackEventIdx(Number(t), segmentTargetFreezeIdx);
+                                lastPlaybackTimeForMarkerCheck = isFinite(Number(prev)) ? Number(prev) : Number(t);
+                                return;
+                            }
                             // green = pass-through: leapfrog the card and keep playing.
                             handleGreenPassthroughEvent(this, ev, prev, t);
                             return;
@@ -2505,6 +2836,11 @@ function initializePlayer(videoUrl, timelineArray) {
                             if (isStopFreezeMarker(ev.marker)) {
                                 pauseFired = true;
                                 applyFreezeMarkerStopAtCrossing(this, ev.marker, ev.freezeMarkerIndex, prev, t, "autoplay_freeze_stale_recover");
+                                return;
+                            }
+                            if (ev.marker && ev.marker.insideRedLoop) {
+                                guidedTargetEventIdx = findNextSegmentPlaybackEventIdx(Number(t), segmentTargetFreezeIdx);
+                                lastPlaybackTimeForMarkerCheck = isFinite(Number(prev)) ? Number(prev) : Number(t);
                                 return;
                             }
                             // green = pass-through: leapfrog the card and keep playing.
@@ -2578,14 +2914,21 @@ var states={
 	lastSlide: false
 };
 
-function executeClick(btnURL){
-    event.stopPropagation();
-    self.location.href=btnURL;
+function executeClick(btnURL, clickEvent) {
+    var evt = clickEvent || (typeof window !== "undefined" ? window.event : null);
+    if (evt && typeof evt.stopPropagation === "function") {
+        evt.stopPropagation();
     }
-function executeClickNewWindow(btnURL){
-    event.stopPropagation();
+    self.location.href = btnURL;
+}
+
+function executeClickNewWindow(btnURL, clickEvent) {
+    var evt = clickEvent || (typeof window !== "undefined" ? window.event : null);
+    if (evt && typeof evt.stopPropagation === "function") {
+        evt.stopPropagation();
+    }
     window.open(btnURL);
-    }
+}
 
 //Avoid picking slides that don't exist
 function checkSlideNum(){
@@ -3366,7 +3709,12 @@ $(function(){
 	});
 
 	// Normal back button
-	$('#btnBack').on('click', function(){
+	$('#btnBack').on('click', function(e){
+        if (CONTINUOUS_VIDEO_PLAYBACK) {
+            if (e && typeof e.preventDefault === "function") e.preventDefault();
+            if (e && typeof e.stopImmediatePropagation === "function") e.stopImmediatePropagation();
+            return;
+        }
 		backSlide();
 	});
 });
@@ -3439,6 +3787,9 @@ document.onkeydown=function(e){
             backSlideSide();
             console.log('left arrow side');
         }
+        else if (CONTINUOUS_VIDEO_PLAYBACK) {
+            goBackToPreviousFreezeAndPlay("back_key_left");
+        }
         else {
             backSlide();
             console.log('left arrow');
@@ -3450,6 +3801,9 @@ document.onkeydown=function(e){
         if (sideVid){
             backSlideSide();
             console.log('pgup side');
+        }
+        else if (CONTINUOUS_VIDEO_PLAYBACK) {
+            goBackToPreviousFreezeAndPlay("back_key_pgup");
         }
         else {
             backSlide();

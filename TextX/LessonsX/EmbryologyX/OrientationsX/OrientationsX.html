@@ -159,6 +159,26 @@ Video tag not supported
             console.log("Loaded timing array:", srcArray);
             console.log("Loaded video URL:", videoUrl);
 
+            // Use the generated chapter mapping so each menu button opens its
+            // own segment even when the timeline contains inserted marker rows.
+            try {
+                const metaDoc = await db.collection("lessonMetadata").doc(lessonId).get();
+                const metaData = metaDoc.exists ? metaDoc.data() || {} : {};
+                const chapterSegmentMap = metaData.chapterSegmentMap || {};
+                const menuToSlideIndex = {};
+                Object.keys(chapterSegmentMap).forEach(menuId => {
+                    const segIdx = Number(chapterSegmentMap[menuId]);
+                    if (Number.isFinite(segIdx) && segIdx > 0) {
+                        // Menu click sets the row before nextSlide advances it.
+                        menuToSlideIndex[menuId] = segIdx - 1;
+                    }
+                });
+                window.menuToSlideIndex = menuToSlideIndex;
+            } catch (e) {
+                console.warn("Unable to load chapterSegmentMap for lesson:", lessonId, e);
+                window.menuToSlideIndex = window.menuToSlideIndex || {};
+            }
+
             // Always initialize player to set window.srcArray (required by masterUIcontrol.js)
             if (videoUrl && srcArray && srcArray.length > 0) {
                 initializePlayer(videoUrl, srcArray);

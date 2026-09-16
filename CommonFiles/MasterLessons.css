@@ -233,18 +233,19 @@ button:focus {
 }
 
 .btnHeader{
-	height: 4.5vh;
+	height: 6vh;
 	position: relative;
 }
 
 .lessonButtons {
 	display: flex;
 	flex-wrap: wrap;
-	justify-content: center;
+	justify-content: flex-start;
 	align-items: center;
-	gap: 1vmin 1.4vmin;
-    width: 100%;
+	gap: 0;
+    width: auto;
 	position: absolute;
+	left: 1vmin;
 	bottom: 1vmin;
 	z-index: 1;
 }

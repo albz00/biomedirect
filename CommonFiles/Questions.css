@@ -1,9 +1,11 @@
-@import url("ViewportFit.css");
-
 .entireQuestionsPage {
     font-family: Arial Rounded MT Bold, sans-serif;
     font-size: 1.3vw;
     color: darkblue;
+    width: 90vw;
+    height: 72.72vw;
+    max-width: 160vh;
+    max-height: 89.7vh;
     border-color: darkcyan;
     border-width: 2vw;
     border-left-style: ridge;

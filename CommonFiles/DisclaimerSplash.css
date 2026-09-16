@@ -1,0 +1,35 @@
+html.disclaimer-seen #biomeDisclaimerSplash {
+    display: none !important;
+}
+
+#biomeDisclaimerSplash {
+    position: fixed;
+    inset: 0;
+    z-index: 100000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.2vmin;
+    margin: 0;
+    padding: 2vmin;
+    box-sizing: border-box;
+    background: #000;
+    cursor: pointer;
+}
+
+#biomeDisclaimerSplash img {
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: min(96vw, 137.5vh);
+    max-height: 88vh;
+    object-fit: contain;
+    pointer-events: none;
+}
+
+#biomeDisclaimerSplash .disclaimer-hint {
+    color: #d8d8d8;
+    font: 600 1.8vmin/1.2 Arial, Helvetica, sans-serif;
+    letter-spacing: 0.04em;
+}

@@ -6,6 +6,7 @@
     <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 	<link rel="stylesheet" href="../CommonFiles/CentralMenu.css">
+    <link rel="stylesheet" href="../CommonFiles/DisclaimerSplash.css">
     <style>
         .footer-login-link {
             opacity: 0.5;
@@ -24,9 +25,20 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script>
+        try {
+            if (window.localStorage.getItem('biomeDisclaimerSeen') === '1') {
+                document.documentElement.classList.add('disclaimer-seen');
+            }
+        } catch (e) { /* show splash */ }
+    </script>
 </head>
 
 <body>
+    <div id="biomeDisclaimerSplash" role="dialog" aria-label="Copyright notice. Click to continue." tabindex="0">
+        <img src="../CommonFiles/Images/Disclaimer.jpg" alt="Biology from Molecules to Embryos, Version 2">
+        <span class="disclaimer-hint">Click to continue</span>
+    </div>
     <div class="entireCentralMenu" id="entireCentralMenu">            <!-- Central Menu Container, Menu and Footer Links -->
 
         <div class="centralMenuHeader">
@@ -130,6 +142,7 @@
 </body>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+<script src="../CommonFiles/DisclaimerSplash.js"></script>
 <script src="BtnTogTextCentMenuX.js"></script>
 <script src="../CommonFiles/CentralMenuFooterTypewriter.js"></script>
 <script src="../CommonFiles/ApplyMenuOverrides.js"></script>

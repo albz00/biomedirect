@@ -1,9 +1,18 @@
-@import url("ViewportFit.css");
+body {
+    margin: 0;
+    background: #fff;
+}
 
 .entireFeedbackPage {
     font-family: Arial, sans-serif;
     font-size: 1.39vw;
     color: darkblue;
+    width: 90vw;
+    height: 72.72vw; /* same stage as questions / excerpts / citations */
+    max-width: 160vh;
+    max-height: 89.7vh;
+    box-sizing: border-box;
+    background-color: #fff;
     border-color: darkcyan;
     border-width: 4vmin;
     border-left-style: ridge;
@@ -12,7 +21,7 @@
     border-bottom-style: groove;
     margin: auto;
     overflow: auto;
-    align-content: center;
+    padding: 1.5vmin 2vmin 2vmin;
 }
 
 h1 {
@@ -20,7 +29,8 @@ h1 {
     font-size: 6vmin;
     font-weight: bolder;
     text-align: center;
-    line-height: 1vmin;
+    line-height: 1.15;
+    margin: 0.4vmin 0;
 }
 
 h2, .h2 {
@@ -28,7 +38,8 @@ h2, .h2 {
     font-size: 8vmin;
     font-weight: bolder;
     text-align: center;
-    line-height: 1vmin;
+    line-height: 1.1;
+    margin: 0.6vmin 0 0.8vmin;
 }
 
 h3 {
@@ -36,8 +47,10 @@ h3 {
     font-size: 6vmin;
     font-weight: bolder;
     text-align: center;
-    line-height: 1vmin;
+    line-height: 1.15;
+    margin: 0.4vmin 0 1.6vmin;
 }
+
 .heading {
     padding-top: 0vmin;
     padding-bottom: 3.5vmin;

@@ -1,7 +1,10 @@
 /* Shared stage sizing for TVs, laptops, and phones.
    Original layout locked to 1650×1200 (11:8). On a 16:9 TV that
    letterboxes into an odd, undersized panel (e.g. 1485×1080 on 1080p).
-   Landscape fills the window; portrait keeps the 11:8 contain. */
+   Landscape fills the window; portrait keeps the 11:8 contain.
+
+   Overlay pages (questions, excerpts, popups, citations, feedback)
+   must NOT import this file — it is only for the central menu / lesson stage. */
 
 html, body {
 	width: 100%;
@@ -29,20 +32,6 @@ html, body {
 	max-width: none;
 }
 
-/* Citations / excerpts / questions / feedback: fill the TV with a small inset */
-.citationsMain,
-.excerptsMain,
-.popupsMain,
-.entireQuestionsPage,
-.entireFeedbackPage,
-.entireAcknowledgePage {
-	box-sizing: border-box;
-	width: 96%;
-	height: 94%;
-	max-width: none;
-	max-height: none;
-}
-
 @media (max-aspect-ratio: 5/4) {
 	.entireCentralMenu,
 	.lessons,
@@ -59,17 +48,5 @@ html, body {
 	.viScript {
 		width: 100vw;
 		max-width: 137.5vmin;
-	}
-
-	.citationsMain,
-	.excerptsMain,
-	.popupsMain,
-	.entireQuestionsPage,
-	.entireFeedbackPage,
-	.entireAcknowledgePage {
-		width: 90vw;
-		height: 72.72vw;
-		max-width: 137.5vmin;
-		max-height: 89.7vmin;
 	}
 }

@@ -5529,5 +5529,126 @@ body.guide-tray #dashboardScreen {
     }
 }
 
+/* Admin Hints — solid gold "click me" cues */
+@keyframes hint-gold-pulse {
+    0%, 100% { border-color: #a88b14; background: #2f2b1c; }
+    50% { border-color: #f1c21b; background: #3f3820; }
+}
+
+@keyframes hint-gold-pulse-box {
+    0%, 100% { border-color: #a88b14; background: #2f2b1c !important; }
+    50% { border-color: #f1c21b; background: #3f3820 !important; }
+}
+
+@keyframes hint-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(5px); }
+}
+
+#adminHintsBtn.active {
+    background: #3a3420 !important;
+    color: #f1c21b !important;
+    border-color: #c6a017 !important;
+}
+
+body.admin-hints .tree-lesson.has-video,
+body.admin-hints .tree-lesson.missing,
+body.admin-hints .tree-lesson.has-video.selected,
+body.admin-hints .tree-lesson.missing.selected,
+body.admin-hints .tree-lesson.has-video:hover,
+body.admin-hints .tree-lesson.missing:hover {
+    outline: none !important;
+    border: 1px solid #f1c21b !important;
+    background: #3a3420 !important;
+    animation: hint-gold-pulse 2.8s ease-in-out infinite;
+}
+
+body.admin-hints #srcArrayEditorCard.hint-has-chapters,
+body.admin-hints #selectedLessonCard.hint-assign-target,
+body.admin-hints #videosCard.hint-upload-target {
+    outline: none !important;
+    border: 2px solid #f1c21b !important;
+    background: #3a3420 !important;
+    animation: hint-gold-pulse-box 2.8s ease-in-out infinite;
+}
+
+body.admin-hints #selectedLessonCard.hint-assign-target .assignment-row {
+    background: #f1c21b !important;
+    border: 1px solid #c6a017 !important;
+    padding: 0.55rem 0.65rem;
+}
+
+body.admin-hints #selectedLessonCard.hint-assign-target .assignment-row select,
+body.admin-hints #selectedLessonCard.hint-assign-target .assignment-row .assign-btn {
+    border-color: #161616 !important;
+    color: #161616 !important;
+    background: #fff !important;
+}
+
+@keyframes hint-gold-btn {
+    0%, 100% { background: #d4a017; border-color: #a88b14; }
+    50% { background: #f1c21b; border-color: #fdc82f; }
+}
+
+body.admin-hints #uploadVideoBtn.hint-upload-btn {
+    background: #f1c21b !important;
+    color: #161616 !important;
+    border: 1px solid #c6a017 !important;
+    animation: hint-gold-btn 2.8s ease-in-out infinite;
+}
+
+body.admin-hints #uploadVideoBtn.hint-upload-btn .btn-label {
+    color: #161616 !important;
+}
+
+.hint-videos-callout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    margin: 0.15rem 0 0.35rem;
+    padding: 0.55rem 0.9rem 0.5rem;
+    background: #f1c21b !important;
+    color: #161616 !important;
+    border: 1px solid #c6a017 !important;
+    pointer-events: none;
+}
+
+.hint-videos-callout[hidden] {
+    display: none !important;
+}
+
+.hint-videos-arrow {
+    font-size: 1.35rem;
+    line-height: 1;
+    color: #161616;
+    animation: hint-bounce 1.7s ease-in-out infinite;
+}
+
+.hint-videos-arrow-up {
+    order: -1;
+}
+
+.hint-videos-msg {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #161616 !important;
+    text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body.admin-hints .tree-lesson.has-video,
+    body.admin-hints .tree-lesson.missing,
+    body.admin-hints #srcArrayEditorCard.hint-has-chapters,
+    body.admin-hints #selectedLessonCard.hint-assign-target,
+    body.admin-hints #videosCard.hint-upload-target,
+    body.admin-hints #uploadVideoBtn.hint-upload-btn,
+    .hint-videos-arrow {
+        animation: none;
+    }
+}
+
 
 

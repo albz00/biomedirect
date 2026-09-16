@@ -157,6 +157,9 @@
                     <svg class="btn-icon heroicon" width="20" height="20" aria-hidden="true"><use href="#icon-arrow-up-tray"/></svg>
                     <span class="btn-label">Upload Video</span>
                 </button>
+                <button id="adminHintsBtn" class="btn btn-secondary" type="button" title="Highlight lessons with and without videos, and show where to assign, upload, or map chapters" aria-pressed="false">
+                    <span class="btn-label">Hints</span>
+                </button>
                 <input type="file" id="uploadVideoInput" accept="video/mp4" multiple style="display:none;">
                 <div class="status-indicator">
                     <span id="statusText">Ready</span>
@@ -204,6 +207,10 @@
                                 <p class="placeholder">Select a lesson from the tree</p>
                             </div>
                         </div>
+                    </div>
+                    <div id="hintAssignCallout" class="hint-videos-callout" hidden>
+                        <span class="hint-videos-arrow hint-videos-arrow-up" aria-hidden="true">↑</span>
+                        <p class="hint-videos-msg">This lesson has no video. Assign one here, or upload a new file below.</p>
                     </div>
                     <div id="srcArrayEditorCard" class="srcarray-editor-card">
                         <button type="button" class="srcarray-editor-header" id="srcArrayEditorToggle" aria-expanded="true" aria-controls="srcArrayEditorBody">
@@ -387,6 +394,10 @@
                             </div>
                             <p id="srcArrayEditorEmpty" class="srcarray-editor-empty">Pick a lesson that has a video attached to see and edit its pauses and chapters.</p>
                         </div>
+                    </div>
+                    <div id="hintVideosCallout" class="hint-videos-callout" hidden>
+                        <span class="hint-videos-arrow" aria-hidden="true">↓</span>
+                        <p class="hint-videos-msg">Upload a video to see chapters mapped.</p>
                     </div>
                     <div id="videosCard" class="collapsible-card collapsed">
                         <button type="button" class="collapsible-card-header" id="videosCardToggle" aria-expanded="false" aria-controls="videosCardBody">

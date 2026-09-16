@@ -1,32 +1,71 @@
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">                                                        <!--Machine language translation-->
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
-		<meta name="keywords" content="bio animations, Animated Biology Lessons, Animated Genetics Lessons, Animated Embryology Lessons, Animated Biology, Animated Genetics, Animated Embryology, Biology Lessons, Genetics Lessons, Embryology Lessons, biology animation videos, biology with animations, biology lessons online, biology video lessons, basic biology lessons, free biology lessons, biology mini lessons, genetics animation videos, genetics with animations, genetics lessons online, genetics video lessons, basic genetics lessons, free genetics lessons, genetics mini lessons, embryology animation videos,embryology with animations, embryology lessons online, embryology video lessons, basic embryology lessons, free embryology lessons, embryology mini lessons">
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-        <!-- Firebase SDKs -->
-        <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-        <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-	</head>
-    <body onload="window.location.href='TextT/CentralMenuT.html'">
-        <script>
-            const firebaseConfig = {
-                apiKey: "AIzaSyB0KbGW-4znfF19ikrUahdCyd_bEungkH4",
-                authDomain: "biome-865cc.firebaseapp.com",
-                projectId: "biome-865cc",
-                storageBucket: "biome-865cc.firebasestorage.app",
-                messagingSenderId: "952652458408",
-                appId: "1:952652458408:web:23e7f0689e9cf973be959d"
-            };
-
-            firebase.initializeApp(firebaseConfig);
-            const db = firebase.firestore();
-
-            // Temporary test code for Firestore
-            db.collection("test").doc("hello").get().then(doc => {
-                console.log("Firestore says:", doc.data());
-            });
-        </script>
-    </body>
-</html> 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="Disclaimer" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="author" content="Jack D. Thatcher, Ph.D., West Virginia School of Osteopathic Medicine" />
+    <meta name="keywords" content="bio animations, Animated Biology Lessons, Animated Genetics Lessons, Animated Embryology Lessons, Animated Biology, Animated Genetics, Animated Embryology, Biology Lessons, Genetics Lessons, Embryology Lessons">
+    <title>Biology from Molecules to Embryos</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            background-color: #000;
+        }
+        .disclaimer {
+            display: block;
+            background-color: #000;
+            width: 100vw;
+            height: 72.72vw;
+            max-height: 100vh;
+            max-width: 137.5vh;
+            object-fit: contain;
+            position: absolute;
+            margin: auto;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            cursor: pointer;
+        }
+    </style>
+    <script>
+        (function () {
+            try {
+                if (window.localStorage.getItem('biomeDisclaimerSeen') === '1') {
+                    window.location.replace('TextT/CentralMenuT.html');
+                }
+            } catch (e) { /* show splash if storage is blocked */ }
+        })();
+    </script>
+</head>
+<body>
+    <img
+        class="disclaimer"
+        id="disclaimer"
+        src="CommonFiles/Images/Disclaimer.jpg"
+        alt="Biology from Molecules to Embryos, Version 2. Click to continue."
+        role="button"
+        tabindex="0"
+    >
+    <script>
+        (function () {
+            var img = document.getElementById('disclaimer');
+            function enterPlatform() {
+                try { window.localStorage.setItem('biomeDisclaimerSeen', '1'); } catch (e) { /* ignore */ }
+                window.location.href = 'TextT/CentralMenuT.html';
+            }
+            if (img) {
+                img.addEventListener('click', enterPlatform);
+                img.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        enterPlatform();
+                    }
+                });
+            }
+        })();
+    </script>
+</body>
+</html>

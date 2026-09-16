@@ -1,9 +1,12 @@
-@import url("ViewportFit.css");
 @import url("PixelButtons.css");
 
 .citationsMain {
     /* font-family: Arial Rounded MT Black, sans-serif; */
-    color: darkblue;
+    color: #000;
+    width: 90vw;
+    height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
+    max-width: 137.5vh; /* (1650/1200) * 100 ... ratio = 1.375*/
+    max-height: 89.7vh;
     border-color: darkcyan;
     border-width: 2.5vmin;
     border-left-style: ridge;
@@ -104,6 +107,7 @@ p.ref {
     font-family: Arial Rounded MT, sans-serif;
     font-size: 2vmin;
     line-height: 2.7vmin;
+    color: #000;
     position: relative;
     text-align: left;
     margin-right: 2vmin;
@@ -112,22 +116,14 @@ p.ref {
     text-indent: -2em;
 }
 
-.table-links > a:link {
-    color: #8C5AAF;
+.table-links a,
+.table-links a:link,
+.table-links a:visited,
+.table-links a:hover,
+.table-links a:active {
+    color: #000;
+    text-decoration: none;
 }
-
-.table-links > a:hover {
-    color: blue;
-}
-
-.table-links > a:active {
-    color: #CA81FF;
-}
-/*
-.table-links > a:visited {
-    color: peru;
-}
-*/
 
 table {
     margin: 1vmin;

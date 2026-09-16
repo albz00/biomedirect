@@ -1,15 +1,11 @@
-@import url("ViewportFit.css");
-
-body {
-    background:
-        linear-gradient(rgba(0, 0, 0, 0.72), rgba(0, 0, 0, 0.72)),
-        url("Images/NewCentralMenuBackground.png") center / cover no-repeat fixed;
-}
-
 .entireAcknowledgePage {
     font-family: Arial Bold, sans-serif;
     line-height: .8vw;
     color: darkblue;
+    width: 90vw;
+    height: 72.72vw; /* (1200/1650) * 100 ... ratio = 1.375*/
+    max-width: 150vh; /* (1650/1200) * 100 ... ratio = 1.375*/
+    max-height: 89.7vh;
     background-color: white;
     border-color: darkcyan;
     border-width: 2vw;

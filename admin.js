@@ -588,6 +588,7 @@ function setupEventListeners() {
 
     setupSrcArrayEditorListeners();
     setupDevModeToggle();
+    setupAdminHints();
 
     // Profile button: open profile modal and fill with current user
     if (profileBtn && profileModal) {
@@ -1555,17 +1556,20 @@ function renderSidebarTree() {
     if (!treeEl) return;
     if (lessonsData.length === 0) {
         treeEl.innerHTML = '<p class="placeholder">Click "Load Lessons &amp; Videos" at the top to see your lessons here.</p>';
+        updateAdminHints();
         return;
     }
     const filteredLessons = getFilteredLessons();
     if (filteredLessons.length === 0) {
         treeEl.innerHTML = '<p class="placeholder">No lessons match your search/filter</p>';
+        updateAdminHints();
         return;
     }
 
     // Structure-aware rendering: mirror the live menu order + hidden state when an overlay exists.
     if (menuStructure && Array.isArray(menuStructure.sections)) {
         renderSidebarTreeStructured(treeEl, filteredLessons);
+        updateAdminHints();
         return;
     }
 
@@ -1618,6 +1622,7 @@ function renderSidebarTree() {
             </div>`;
     }).join('');
     treeEl.innerHTML = html;
+    updateAdminHints();
 }
 
 // ============================================================
@@ -1789,6 +1794,7 @@ function renderSidebarTreeStructured(treeEl, filteredLessons) {
     }).join('');
 
     treeEl.innerHTML = html || '<p class="placeholder">No lessons match your search/filter</p>';
+    updateAdminHints();
 }
 
 async function openMenuStructureEditor() {
@@ -2050,11 +2056,13 @@ async function displaySelectedLesson() {
     if (!panel) return;
     if (!selectedLessonId) {
         panel.innerHTML = '<p class="placeholder">Select a lesson from the tree</p>';
+        updateAdminHints();
         return;
     }
     const lesson = lessonsData.find(l => l.lessonId === selectedLessonId);
     if (!lesson) {
         panel.innerHTML = '<p class="placeholder">Lesson not found</p>';
+        updateAdminHints();
         return;
     }
     let forceFirstChapterStartAtZero = false;
@@ -2067,6 +2075,7 @@ async function displaySelectedLesson() {
         console.warn('Could not load lesson playback settings:', err);
     }
     panel.innerHTML = getLessonCardHTML(lesson, { forceFirstChapterStartAtZero });
+    updateAdminHints();
 }
 
 function getLessonCardHTML(lesson, playbackOpts) {
@@ -2641,6 +2650,7 @@ function renderSrcArrayTable(srcArray, lessonId, chapterTitles, panelExtras) {
         tbody.innerHTML = '';
         tableWrap.style.display = 'none';
         emptyEl.style.display = 'block';
+        updateAdminHints();
         return;
     }
 
@@ -2704,6 +2714,7 @@ function renderSrcArrayTable(srcArray, lessonId, chapterTitles, panelExtras) {
         </tr>`;
     }).join('');
     tbody.innerHTML = rows;
+    updateAdminHints();
 }
 
 function resetAiTitleMappingPanel() {
@@ -3265,6 +3276,83 @@ function setupDevModeToggle() {
             devOn = !document.body.classList.contains('dev-mode');
             apply(devOn);
             try { localStorage.setItem('adminDevMode', devOn ? '1' : '0'); } catch (e) { /* ignore */ }
+        });
+    }
+}
+
+function srcArrayHasIdentifiedChapters() {
+    return (currentSrcArrayForEditor || []).some((seg) => {
+        const color = String(seg.markerColor || '').toLowerCase();
+        const sem = String(seg.markerSemantics || '').toLowerCase();
+        const role = String(seg.role || '').toLowerCase();
+        return color === 'green' || sem === 'menu' || role === 'opening' || !!seg.menuId;
+    });
+}
+
+function updateAdminHints() {
+    const card = document.getElementById('srcArrayEditorCard');
+    const videosCard = document.getElementById('videosCard');
+    const lessonCard = document.getElementById('selectedLessonCard');
+    const assignCallout = document.getElementById('hintAssignCallout');
+    const videosCallout = document.getElementById('hintVideosCallout');
+    const uploadBtn = document.getElementById('uploadVideoBtn');
+    const hintsOn = document.body.classList.contains('admin-hints');
+    const lesson = lessonsData.find((l) => l.lessonId === selectedLessonId);
+    const hasVideo = !!(lesson && lesson.hasVideo);
+    const hasChapters = hasVideo && srcArrayHasIdentifiedChapters();
+    const needsAssign = hintsOn && !hasVideo;
+    const pointToVideos = hintsOn && !hasChapters;
+
+    if (card) {
+        card.classList.toggle('hint-has-chapters', hintsOn && hasChapters);
+    }
+    if (lessonCard) {
+        lessonCard.classList.toggle('hint-assign-target', needsAssign);
+    }
+    if (videosCard) {
+        videosCard.classList.toggle('hint-upload-target', pointToVideos);
+    }
+    if (uploadBtn) {
+        uploadBtn.classList.toggle('hint-upload-btn', needsAssign);
+    }
+    if (assignCallout) {
+        assignCallout.hidden = !needsAssign;
+        const msg = assignCallout.querySelector('.hint-videos-msg');
+        if (msg) {
+            msg.textContent = selectedLessonId
+                ? 'This lesson has no video. Assign one here, or upload a new file below.'
+                : 'Pick a lesson, then assign a video here.';
+        }
+    }
+    if (videosCallout) {
+        videosCallout.hidden = !pointToVideos;
+        const msg = videosCallout.querySelector('.hint-videos-msg');
+        if (msg) {
+            msg.textContent = hasVideo
+                ? 'Scan this video in Video Pauses & Chapters above to map chapters.'
+                : 'Upload a video here, then assign it in Lesson & Video above.';
+        }
+    }
+}
+
+function setupAdminHints() {
+    const btn = document.getElementById('adminHintsBtn');
+    const apply = (on) => {
+        document.body.classList.toggle('admin-hints', !!on);
+        if (btn) {
+            btn.classList.toggle('active', !!on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        }
+        updateAdminHints();
+    };
+    let on = false;
+    try { on = localStorage.getItem('adminHints') === '1'; } catch (e) { on = false; }
+    apply(on);
+    if (btn) {
+        btn.addEventListener('click', () => {
+            const next = !document.body.classList.contains('admin-hints');
+            apply(next);
+            try { localStorage.setItem('adminHints', next ? '1' : '0'); } catch (e) { /* ignore */ }
         });
     }
 }

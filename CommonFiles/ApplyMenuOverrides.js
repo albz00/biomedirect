@@ -32,11 +32,6 @@
             return;
         }
 
-        // Make sure dropdowns are wrapped before we move things around.
-        if (window.BioMEChapterNav && typeof window.BioMEChapterNav.init === 'function') {
-            window.BioMEChapterNav.init();
-        }
-
         try {
             // Collect all sections and lesson entries from the current menu DOM
             const sectionLists = document.querySelectorAll('ul.menuLists');
@@ -158,11 +153,6 @@
             } catch (structErr) {
                 console.warn('[MenuOverrides] Structure overlay skipped:', structErr);
             }
-
-            // Re-wire any newly created sections (idempotent).
-            if (window.BioMEChapterNav && typeof window.BioMEChapterNav.init === 'function') {
-                window.BioMEChapterNav.init();
-            }
         } catch (err) {
             console.error('Error applying menu overrides:', err);
         }
@@ -189,23 +179,9 @@
             while (el && el.parentElement !== centralMenu) el = el.parentElement;
             return el || sectionEl;
         }
-        function dropdownOf(sectionEl) {
-            let panel = sectionEl.querySelector('.chapterDropdown');
-            if (!panel) {
-                panel = document.createElement('div');
-                panel.className = 'chapterDropdown';
-                const header = sectionEl.querySelector('h1');
-                if (header) header.insertAdjacentElement('afterend', panel);
-                else sectionEl.appendChild(panel);
-            }
-            return panel;
-        }
-
         const orderedSections = structure.sections
             .slice()
             .sort((a, b) => (a.order || 0) - (b.order || 0));
-
-        const visibleColumns = [];
 
         orderedSections.forEach(sec => {
             let sectionEl = sectionElByKey[sec.key];
@@ -220,9 +196,6 @@
                 const h1 = document.createElement('h1');
                 h1.textContent = sec.displayName || sec.key;
                 ul.appendChild(h1);
-                const panel = document.createElement('div');
-                panel.className = 'chapterDropdown';
-                ul.appendChild(panel);
                 wrapper.appendChild(ul);
                 centralMenu.appendChild(wrapper);
                 sectionEl = ul;
@@ -240,7 +213,6 @@
             column.style.display = '';
 
             // Reorder lessons within the section; move lessons from other sections in.
-            const panel = dropdownOf(sectionEl);
             const orderedLessons = (Array.isArray(sec.lessons) ? sec.lessons : [])
                 .slice()
                 .sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -249,23 +221,11 @@
                 const li = liByBaseKey[lessonEntry.key];
                 if (!li) return; // orphan lesson entry -> skip
                 li.style.display = lessonEntry.hidden ? 'none' : '';
-                panel.appendChild(li); // append in order (also moves between sections)
+                sectionEl.appendChild(li); // append in order (also moves between sections)
             });
 
             // Move the column to the end (sections processed in order -> final order)
             centralMenu.appendChild(column);
-            visibleColumns.push(column);
         });
-
-        // Edge alignment: leftmost dropdown opens left, rightmost opens right,
-        // middle ones stay centered. These classes are defined in CentralMenu.css
-        // and win over the static .group1/.group4 rules by source order.
-        document.querySelectorAll('.menu-edge-left, .menu-edge-right').forEach(el => {
-            el.classList.remove('menu-edge-left', 'menu-edge-right');
-        });
-        if (visibleColumns.length) {
-            visibleColumns[0].classList.add('menu-edge-left');
-            visibleColumns[visibleColumns.length - 1].classList.add('menu-edge-right');
-        }
     }
 })();
